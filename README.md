@@ -9,4 +9,4 @@ Swinburne University of Technology.
 Hayley Nguyen (105005495) · Numaya Senanayake (105305030)
 
 ## Stack
-ASP.NET Core MVC · PostgreSQL · Docker · GitHub Actions · Azure Container Apps
+ASP.NET Core MVC · PostgreSQL · Docker · GitHub Actions · Azure Container AppsDirect push test
