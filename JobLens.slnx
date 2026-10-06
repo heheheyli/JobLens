@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="JobLens.Tests/JobLens.Tests.csproj" />
+  <Project Path="JobLens.Web/JobLens.Web.csproj" />
+</Solution>
