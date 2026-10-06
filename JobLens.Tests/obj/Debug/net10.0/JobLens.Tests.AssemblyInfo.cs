@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("JobLens.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dabedd7c052eb404e1b7dbd8cd015a55d854f66e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4b3d6caa8517d7a8d7aac0fcea9ede0c6d9c9ba3")]
 [assembly: System.Reflection.AssemblyProductAttribute("JobLens.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("JobLens.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
