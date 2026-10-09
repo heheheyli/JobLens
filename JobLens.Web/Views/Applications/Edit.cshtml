@@ -1,89 +1,22 @@
 @model JobLens.Web.Models.JobApplication
 
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Edit application";
+    ViewData["SubmitLabel"] = "Save changes";
 }
 
-<h1>Edit</h1>
-
-<h4>JobApplication</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="Id" />
-            <div class="form-group">
-                <label asp-for="Employer" class="control-label"></label>
-                <input asp-for="Employer" class="form-control" />
-                <span asp-validation-for="Employer" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Role" class="control-label"></label>
-                <input asp-for="Role" class="form-control" />
-                <span asp-validation-for="Role" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Location" class="control-label"></label>
-                <input asp-for="Location" class="form-control" />
-                <span asp-validation-for="Location" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Source" class="control-label"></label>
-                <input asp-for="Source" class="form-control" />
-                <span asp-validation-for="Source" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Url" class="control-label"></label>
-                <input asp-for="Url" class="form-control" />
-                <span asp-validation-for="Url" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="DateApplied" class="control-label"></label>
-                <input asp-for="DateApplied" class="form-control" />
-                <span asp-validation-for="DateApplied" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Status" class="control-label"></label>
-                <input asp-for="Status" class="form-control" />
-                <span asp-validation-for="Status" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="NextActionDate" class="control-label"></label>
-                <input asp-for="NextActionDate" class="form-control" />
-                <span asp-validation-for="NextActionDate" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Notes" class="control-label"></label>
-                <input asp-for="Notes" class="form-control" />
-                <span asp-validation-for="Notes" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="AdvertisementText" class="control-label"></label>
-                <input asp-for="AdvertisementText" class="form-control" />
-                <span asp-validation-for="AdvertisementText" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="CreatedAt" class="control-label"></label>
-                <input asp-for="CreatedAt" class="form-control" />
-                <span asp-validation-for="CreatedAt" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="StatusHistory" class="control-label"></label>
-                <input asp-for="StatusHistory" class="form-control" />
-                <span asp-validation-for="StatusHistory" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
-            </div>
-        </form>
-    </div>
+<div class="form-page-head">
+    <a asp-action="Index" class="back-link">← Applications</a>
+    <h1>@Model.Role</h1>
+    <p class="form-page-sub">@Model.Employer · added @Model.CreatedAt.ToLocalTime().ToString("d MMM yyyy")</p>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
+<form asp-action="Edit" class="app-form" novalidate>
+    <input type="hidden" asp-for="Id" />
+    <partial name="_ApplicationForm" model="Model" />
+</form>
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script src="~/js/application-form.js" asp-append-version="true"></script>
 }

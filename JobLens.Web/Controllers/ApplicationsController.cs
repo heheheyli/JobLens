@@ -18,22 +18,29 @@ public class ApplicationsController : Controller
     {
         var query = _context.JobApplications.AsQueryable();
 
+        if (!string.IsNullOrWhiteSpace(employer))
+        {
+            query = query.Where(a => EF.Functions.ILike(a.Employer, $"%{employer}%")
+                || EF.Functions.ILike(a.Role, $"%{employer}%"));
+        }
+
+        ViewBag.StatusCounts = await query
+            .GroupBy(a => a.Status)
+            .ToDictionaryAsync(g => g.Key, g => g.Count());
+        ViewBag.TotalCount = await _context.JobApplications.CountAsync();
+
         if (!string.IsNullOrWhiteSpace(status)
             && Enum.TryParse<ApplicationStatus>(status, out var parsed))
         {
             query = query.Where(a => a.Status == parsed);
         }
 
-        if (!string.IsNullOrWhiteSpace(employer))
-        {
-            query = query.Where(a => EF.Functions.ILike(a.Employer, $"%{employer}%"));
-        }
-
         query = sort switch
         {
             "employer" => query.OrderBy(a => a.Employer),
             "oldest" => query.OrderBy(a => a.DateApplied),
-            _ => query.OrderByDescending(a => a.DateApplied)
+            "followup" => query.OrderBy(a => a.NextActionDate == null).ThenBy(a => a.NextActionDate),
+            _ => query.OrderByDescending(a => a.DateApplied).ThenByDescending(a => a.CreatedAt)
         };
 
         ViewBag.Status = status;
@@ -62,9 +69,16 @@ public class ApplicationsController : Controller
     }
 
     // GET: JOBAPPLICATIONS/Create
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
-        return View();
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        await LoadSuggestionsAsync();
+        return View(new JobApplication
+        {
+            DateApplied = today,
+            Status = ApplicationStatus.Applied,
+            NextActionDate = today.AddDays(7),
+        });
     }
 
     // POST: JOBAPPLICATIONS/Create
@@ -72,7 +86,7 @@ public class ApplicationsController : Controller
     // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,Employer,Role,Location,Source,Url,DateApplied,Status,NextActionDate,Notes,AdvertisementText,StatusHistory")] JobApplication jobapplication)
+    public async Task<IActionResult> Create([Bind("Id,Employer,Role,Location,Source,Url,DateApplied,Status,NextActionDate,Notes,AdvertisementText")] JobApplication jobapplication)
     {
         if (ModelState.IsValid)
         {
@@ -80,6 +94,7 @@ public class ApplicationsController : Controller
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+        await LoadSuggestionsAsync();
         return View(jobapplication);
     }
 
@@ -96,6 +111,7 @@ public class ApplicationsController : Controller
         {
             return NotFound();
         }
+        await LoadSuggestionsAsync();
         return View(jobapplication);
     }
 
@@ -104,7 +120,7 @@ public class ApplicationsController : Controller
     // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int? id, [Bind("Id,Employer,Role,Location,Source,Url,DateApplied,Status,NextActionDate,Notes,AdvertisementText,StatusHistory")] JobApplication jobapplication)
+    public async Task<IActionResult> Edit(int? id, [Bind("Id,Employer,Role,Location,Source,Url,DateApplied,Status,NextActionDate,Notes,AdvertisementText")] JobApplication jobapplication)
     {
         if (id != jobapplication.Id)
         {
@@ -116,6 +132,7 @@ public class ApplicationsController : Controller
             try
             {
                 _context.Update(jobapplication);
+                _context.Entry(jobapplication).Property(a => a.CreatedAt).IsModified = false;
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
@@ -131,6 +148,7 @@ public class ApplicationsController : Controller
             }
             return RedirectToAction(nameof(Index));
         }
+        await LoadSuggestionsAsync();
         return View(jobapplication);
     }
 
@@ -165,6 +183,17 @@ public class ApplicationsController : Controller
 
         await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
+    }
+
+    private async Task LoadSuggestionsAsync()
+    {
+        ViewBag.Employers = await _context.JobApplications
+            .Select(a => a.Employer).Distinct().OrderBy(e => e).ToListAsync();
+        ViewBag.Roles = await _context.JobApplications
+            .Select(a => a.Role).Distinct().OrderBy(r => r).ToListAsync();
+        ViewBag.Locations = await _context.JobApplications
+            .Where(a => a.Location != null && a.Location != "")
+            .Select(a => a.Location!).Distinct().OrderBy(l => l).ToListAsync();
     }
 
     private bool JobApplicationExists(int? id)
