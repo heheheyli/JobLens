@@ -1,8 +1,160 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model JobLens.Web.Models.DashboardViewModel
+@using JobLens.Web.Models
+@{
+    ViewData["Title"] = "Dashboard";
+    var goalPct = Model.WeeklyGoal == 0 ? 0 : Math.Min(100, Model.AppliedThisWeek * 100 / Model.WeeklyGoal);
+    var remaining = Math.Max(0, Model.WeeklyGoal - Model.AppliedThisWeek);
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<section class="welcome">
+    <div>
+        <p class="welcome-date">@Model.Today.ToString("dddd, d MMMM")</p>
+        <h1 class="welcome-title">@Model.Greeting <span class="sparkle" aria-hidden="true">✿</span></h1>
+        <p class="welcome-line">@Model.Encouragement</p>
+    </div>
+    <a class="btn btn-primary btn-lg" asp-controller="Applications" asp-action="Create">+ Log an application</a>
+</section>
+
+<section class="dash-grid">
+    <article class="dash-card goal-card">
+        <div class="goal-ring" style="--pct: @goalPct">
+            <div class="goal-ring-inner">
+                <strong>@Model.AppliedThisWeek</strong>
+                <span>of @Model.WeeklyGoal</span>
+            </div>
+        </div>
+        <div>
+            <h2 class="dash-card-title">This week</h2>
+            <p class="dash-muted">
+                @if (remaining == 0)
+                {
+                    <text>Goal met. Anything extra is a bonus.</text>
+                }
+                else
+                {
+                    <text>@remaining more to reach your weekly goal.</text>
+                }
+            </p>
+            <div class="goal-petals" aria-hidden="true">
+                @for (var i = 0; i < Model.WeeklyGoal; i++)
+                {
+                    <span class="@(i < Model.AppliedThisWeek ? "on" : "")"></span>
+                }
+            </div>
+        </div>
+    </article>
+
+    <article class="dash-card streak-card">
+        <p class="dash-label">Week streak</p>
+        <p class="streak-number">@Model.WeekStreak</p>
+        <p class="dash-muted">
+            @(Model.WeekStreak switch
+            {
+                0 => "Send one this week to start a streak.",
+                1 => "week in a row. A beginning!",
+                _ => "weeks in a row. Keep it blooming."
+            })
+        </p>
+    </article>
+
+    <article class="dash-card stats-card">
+        <div class="stat"><span class="stat-num">@Model.Active</span><span class="stat-label">In motion</span></div>
+        <div class="stat"><span class="stat-num">@Model.Interviews</span><span class="stat-label">Interviews</span></div>
+        <div class="stat"><span class="stat-num">@Model.Offers</span><span class="stat-label">Offers</span></div>
+        <div class="stat"><span class="stat-num">@Model.Total</span><span class="stat-label">Sent, all time</span></div>
+    </article>
+</section>
+
+<section class="dash-columns">
+    <article class="dash-card">
+        <div class="dash-card-head">
+            <h2 class="dash-card-title">Up next</h2>
+            <span class="dash-muted small">follow-ups &amp; to-dos</span>
+        </div>
+        @if (Model.UpNext.Count == 0)
+        {
+            <p class="dash-empty">Nothing waiting on you. Set a next-action date on an application and it'll show up here.</p>
+        }
+        else
+        {
+            <ul class="dash-list">
+                @foreach (var a in Model.UpNext)
+                {
+                    var days = a.NextActionDate!.Value.DayNumber - Model.Today.DayNumber;
+                    var (label, cls) = days switch
+                    {
+                        < 0 => ($"{-days}d overdue", "due-late"),
+                        0 => ("today", "due-today"),
+                        1 => ("tomorrow", "due-soon"),
+                        _ => ($"in {days} days", "")
+                    };
+                    <li>
+                        <a asp-controller="Applications" asp-action="Edit" asp-route-id="@a.Id">
+                            <span class="dash-list-main">
+                                <strong>@a.Role</strong>
+                                <span>@a.Employer</span>
+                            </span>
+                            <span class="due-pill @cls">@label</span>
+                        </a>
+                    </li>
+                }
+            </ul>
+        }
+    </article>
+
+    <article class="dash-card">
+        <div class="dash-card-head">
+            <h2 class="dash-card-title">Recently sent</h2>
+            <a class="small" asp-controller="Applications" asp-action="Index">See all</a>
+        </div>
+        @if (Model.Recent.Count == 0)
+        {
+            <p class="dash-empty">Your applications will gather here. The first one is the hardest. You've got this.</p>
+        }
+        else
+        {
+            <ul class="dash-list">
+                @foreach (var a in Model.Recent)
+                {
+                    <li>
+                        <a asp-controller="Applications" asp-action="Edit" asp-route-id="@a.Id">
+                            <span class="dash-list-main">
+                                <strong>@a.Role</strong>
+                                <span>@a.Employer · @a.DateApplied.ToString("d MMM")</span>
+                            </span>
+                            <span class="badge status-@a.Status">@a.Status</span>
+                        </a>
+                    </li>
+                }
+            </ul>
+        }
+    </article>
+</section>
+
+@if (Model.Total > 0)
+{
+    <section class="dash-card pipeline-card">
+        <h2 class="dash-card-title">Where things stand</h2>
+        <div class="pipeline-bar">
+            @foreach (var s in Enum.GetValues<ApplicationStatus>())
+            {
+                if (Model.ByStatus.TryGetValue(s, out var n) && n > 0)
+                {
+                    <span class="status-@s" style="flex: @n" title="@s: @n"></span>
+                }
+            }
+        </div>
+        <ul class="pipeline-legend">
+            @foreach (var s in Enum.GetValues<ApplicationStatus>())
+            {
+                Model.ByStatus.TryGetValue(s, out var n);
+                <li><span class="legend-dot status-@s"></span>@s <strong>@n</strong></li>
+            }
+        </ul>
+    </section>
+}
+
+<aside class="quote-note">
+    <p>@Model.Quote</p>
+    <span>a note for today</span>
+</aside>

@@ -1,0 +1,188 @@
+@model JobLens.Web.Models.JobApplication
+@using JobLens.Web.Models
+@{
+    var employers = ViewBag.Employers as IEnumerable<string> ?? [];
+    var roles = ViewBag.Roles as IEnumerable<string> ?? [];
+    var savedLocations = ViewBag.Locations as IEnumerable<string> ?? [];
+    var locations = savedLocations
+        .Concat(["Remote", "Hybrid", "Melbourne", "Sydney", "Brisbane", "Perth", "Adelaide", "Canberra", "Hobart"])
+        .Distinct(StringComparer.OrdinalIgnoreCase);
+    var sources = new[] { "LinkedIn", "Seek", "Indeed", "Company site", "Referral", "Recruiter" };
+    var submitLabel = (string)(ViewData["SubmitLabel"] ?? "Save application");
+}
+
+<div class="app-form-layout">
+    <div class="app-form-main">
+        <div asp-validation-summary="ModelOnly" class="form-alert"></div>
+
+        <section class="form-section">
+            <header class="form-section-head">
+                <span class="form-step">1</span>
+                <div>
+                    <h2>Role</h2>
+                </div>
+            </header>
+
+            <div class="form-grid">
+                <div class="field">
+                    <label asp-for="Employer" class="form-label"></label>
+                    <input asp-for="Employer" class="form-control" list="employer-list"
+                            autocomplete="organization" autofocus />
+                    <span asp-validation-for="Employer" class="field-error"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Role" class="form-label"></label>
+                    <input asp-for="Role" class="form-control" list="role-list"
+                           autocomplete="organization-title" />
+                    <span asp-validation-for="Role" class="field-error"></span>
+                </div>
+
+                <div class="field field-wide">
+                    <label asp-for="Location" class="form-label">Location <span class="optional">optional</span></label>
+                    <input asp-for="Location" class="form-control" list="location-list"
+                           />
+                    <div class="chip-row" data-fill="Location">
+                        <button type="button" class="chip" data-value="Remote">Remote</button>
+                        <button type="button" class="chip" data-value="Hybrid">Hybrid</button>
+                        <button type="button" class="chip" data-value="Melbourne">Melbourne</button>
+                    </div>
+                    <span asp-validation-for="Location" class="field-error"></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <header class="form-section-head">
+                <span class="form-step">2</span>
+                <div>
+                    <h2>Found at</h2>
+                    <p>Just paste the link</p>
+                </div>
+            </header>
+
+            <div class="form-grid">
+                <div class="field field-wide">
+                    <label asp-for="Url" class="form-label">Listing link <span class="optional">optional</span></label>
+                    <input asp-for="Url" type="url" class="form-control" inputmode="url"
+                            />
+                    <span asp-validation-for="Url" class="field-error"></span>
+                </div>
+
+                <div class="field field-wide">
+                    <label asp-for="Source" class="form-label">On <span class="optional">optional</span></label>
+                    <div class="chip-row" data-fill="Source">
+                        @foreach (var s in sources)
+                        {
+                            <button type="button" class="chip" data-value="@s">@s</button>
+                        }
+                    </div>
+                    <input asp-for="Source" class="form-control mt-2"  />
+                    <span asp-validation-for="Source" class="field-error"></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <header class="form-section-head">
+                <span class="form-step">3</span>
+                <div>
+                    <h2>Status</h2>
+                </div>
+            </header>
+
+            <div class="field">
+                <span class="form-label">Status</span>
+                <div class="status-picker" role="radiogroup" aria-label="Status">
+                    @foreach (var s in Enum.GetValues<ApplicationStatus>())
+                    {
+                        <label class="status-option">
+                            <input type="radio" name="Status" value="@s" checked="@(Model.Status == s)" />
+                            <span class="status-@s">@s</span>
+                        </label>
+                    }
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="field">
+                    <label asp-for="DateApplied" class="form-label"></label>
+                    <input asp-for="DateApplied" type="date" class="form-control" />
+                    <div class="chip-row" data-date-target="DateApplied">
+                        <button type="button" class="chip" data-offset="0">Today</button>
+                        <button type="button" class="chip" data-offset="-1">Yesterday</button>
+                    </div>
+                    <span asp-validation-for="DateApplied" class="field-error"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="NextActionDate" class="form-label">Follow up on <span class="optional">optional</span></label>
+                    <input asp-for="NextActionDate" type="date" class="form-control" />
+                    <div class="chip-row" data-date-target="NextActionDate" data-relative-to="DateApplied">
+                        <button type="button" class="chip" data-offset="3">+3 days</button>
+                        <button type="button" class="chip" data-offset="7">+1 week</button>
+                        <button type="button" class="chip" data-offset="14">+2 weeks</button>
+                        <button type="button" class="chip chip-quiet" data-clear>None</button>
+                    </div>
+                    <span asp-validation-for="NextActionDate" class="field-error"></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <header class="form-section-head">
+                <span class="form-step">4</span>
+                <div>
+                    <h2>Notes &amp; Job listing</h2>
+                </div>
+            </header>
+
+            <div class="field">
+                <label asp-for="Notes" class="form-label">Notes <span class="optional">optional</span></label>
+                <textarea asp-for="Notes" class="form-control" rows="3"
+                          placeholder="Salary range, benefits, what I liked"></textarea>
+            </div>
+
+            <div class="field">
+                <label asp-for="AdvertisementText" class="form-label">Job ad <span class="optional">optional</span></label>
+                <textarea asp-for="AdvertisementText" class="form-control ad-text" rows="6"
+                          placeholder="What's da job description gang?"></textarea>
+                <div class="field-hint"><span data-count-for="AdvertisementText">0</span> words</div>
+            </div>
+        </section>
+
+        <div class="form-actions">
+            <a asp-action="Index" class="btn btn-link">Cancel</a>
+            <button type="submit" class="btn btn-primary btn-lg">@submitLabel</button>
+        </div>
+        <p class="form-shortcut">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to save from anywhere.</p>
+    </div>
+
+    <aside class="app-form-side">
+        <div class="preview-card" aria-live="polite">
+            <span class="preview-tape" aria-hidden="true"></span>
+            <p class="preview-kicker">Preview</p>
+            <h3 class="preview-role" data-preview="Role" data-empty="Job title">Job title</h3>
+            <p class="preview-employer">
+                <span data-preview="Employer" data-empty="Employer">Employer</span><span data-preview-sep="Location"> · </span><span data-preview="Location" data-empty=""></span>
+            </p>
+            <span class="badge" data-preview-status></span>
+            <dl class="preview-meta">
+                <div><dt>Applied</dt><dd data-preview-date="DateApplied">—</dd></div>
+                <div><dt>Follow up</dt><dd data-preview-date="NextActionDate">—</dd></div>
+                <div><dt>Found via</dt><dd data-preview="Source" data-empty="—">—</dd></div>
+            </dl>
+        </div>
+        <p class="preview-cheer" data-cheer>Let's goooo ✿</p>
+    </aside>
+</div>
+
+<datalist id="employer-list">
+    @foreach (var e in employers) { <option value="@e"></option> }
+</datalist>
+<datalist id="role-list">
+    @foreach (var r in roles) { <option value="@r"></option> }
+</datalist>
+<datalist id="location-list">
+    @foreach (var l in locations) { <option value="@l"></option> }
+</datalist>
