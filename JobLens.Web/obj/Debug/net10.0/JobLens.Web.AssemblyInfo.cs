@@ -10,10 +10,11 @@
 using System;
 using System.Reflection;
 
+[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsIdAttribute("228afa3d-8eb1-48cc-8d6c-25362f2ab6cc")]
 [assembly: System.Reflection.AssemblyCompanyAttribute("JobLens.Web")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4b3d6caa8517d7a8d7aac0fcea9ede0c6d9c9ba3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8380f624db9795f5a8fbfbc8346a76e6080d00d1")]
 [assembly: System.Reflection.AssemblyProductAttribute("JobLens.Web")]
 [assembly: System.Reflection.AssemblyTitleAttribute("JobLens.Web")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
