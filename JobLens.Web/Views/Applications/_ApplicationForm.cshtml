@@ -1,5 +1,6 @@
 @model JobLens.Web.Models.JobApplication
 @using JobLens.Web.Models
+@using JobLens.Web.Services
 @{
     var employers = ViewBag.Employers as IEnumerable<string> ?? [];
     var roles = ViewBag.Roles as IEnumerable<string> ?? [];
@@ -94,11 +95,11 @@
             <div class="field">
                 <span class="form-label">Status</span>
                 <div class="status-picker" role="radiogroup" aria-label="Status">
-                    @foreach (var s in Enum.GetValues<ApplicationStatus>())
+                    @foreach (var s in StatusLabels.Ordered)
                     {
                         <label class="status-option">
-                            <input type="radio" name="Status" value="@s" checked="@(Model.Status == s)" />
-                            <span class="status-@s">@s</span>
+                            <input type="radio" name="Status" value="@s" data-label="@s.Label()" checked="@(Model.Status == s)" />
+                            <span class="status-@s">@s.Label()</span>
                         </label>
                     }
                 </div>
@@ -106,7 +107,7 @@
 
             <div class="form-grid">
                 <div class="field">
-                    <label asp-for="DateApplied" class="form-label"></label>
+                    <label asp-for="DateApplied" class="form-label"><span data-wish-text="Date saved">Date applied</span></label>
                     <input asp-for="DateApplied" type="date" class="form-control" />
                     <div class="chip-row" data-date-target="DateApplied">
                         <button type="button" class="chip" data-offset="0">Today</button>
@@ -116,7 +117,7 @@
                 </div>
 
                 <div class="field">
-                    <label asp-for="NextActionDate" class="form-label">Follow up on <span class="optional">optional</span></label>
+                    <label asp-for="NextActionDate" class="form-label"><span data-wish-text="Apply by">Follow up on</span> <span class="optional">optional</span></label>
                     <input asp-for="NextActionDate" type="date" class="form-control" />
                     <div class="chip-row" data-date-target="NextActionDate" data-relative-to="DateApplied">
                         <button type="button" class="chip" data-offset="3">+3 days</button>
@@ -168,8 +169,8 @@
             </p>
             <span class="badge" data-preview-status></span>
             <dl class="preview-meta">
-                <div><dt>Applied</dt><dd data-preview-date="DateApplied">—</dd></div>
-                <div><dt>Follow up</dt><dd data-preview-date="NextActionDate">—</dd></div>
+                <div><dt data-wish-text="Saved">Applied</dt><dd data-preview-date="DateApplied">—</dd></div>
+                <div><dt data-wish-text="Apply by">Follow up</dt><dd data-preview-date="NextActionDate">—</dd></div>
                 <div><dt>Found via</dt><dd data-preview="Source" data-empty="—">—</dd></div>
             </dl>
         </div>

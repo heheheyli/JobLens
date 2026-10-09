@@ -12,6 +12,7 @@ public class DashboardViewModel
     public int Active { get; init; }
     public int Interviews { get; init; }
     public int Offers { get; init; }
+    public int WantToApply { get; init; }
 
     public int? DaysSinceLastApplied { get; init; }
     public int WeekStreak { get; init; }

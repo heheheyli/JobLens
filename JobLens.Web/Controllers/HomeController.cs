@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using JobLens.Web.Data;
 using JobLens.Web.Models;
+using JobLens.Web.Services;
 
 namespace JobLens.Web.Controllers;
 
@@ -11,7 +12,7 @@ public class HomeController : Controller
     private const int WeeklyGoal = 5;
 
     private static readonly ApplicationStatus[] ActiveStatuses =
-        [ApplicationStatus.Applied, ApplicationStatus.Screening, ApplicationStatus.Interview, ApplicationStatus.Offer];
+        [ApplicationStatus.Applied, ApplicationStatus.Interview, ApplicationStatus.Offer];
 
     private static readonly string[] Quotes =
     [
@@ -38,7 +39,9 @@ public class HomeController : Controller
         var today = DateOnly.FromDateTime(now);
         var weekStart = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
 
-        var apps = await _context.JobApplications.AsNoTracking().ToListAsync();
+        var all = await _context.JobApplications.AsNoTracking().ToListAsync();
+        var apps = all.Where(a => a.Status.IsSubmitted()).ToList();
+        var wantToApply = all.Count - apps.Count;
 
         var lastApplied = apps.Count == 0 ? (DateOnly?)null : apps.Max(a => a.DateApplied);
         int? daysSince = lastApplied is { } d ? today.DayNumber - d.DayNumber : null;
@@ -62,8 +65,10 @@ public class HomeController : Controller
             Offers = apps.Count(a => a.Status is ApplicationStatus.Offer or ApplicationStatus.Accepted),
             DaysSinceLastApplied = daysSince,
             WeekStreak = CountWeekStreak(apps, weekStart),
-            UpNext = apps
-                .Where(a => a.NextActionDate != null && ActiveStatuses.Contains(a.Status))
+            WantToApply = wantToApply,
+            UpNext = all
+                .Where(a => a.NextActionDate != null
+                    && (ActiveStatuses.Contains(a.Status) || a.Status == ApplicationStatus.WantToApply))
                 .OrderBy(a => a.NextActionDate)
                 .Take(5)
                 .ToList(),
@@ -72,8 +77,8 @@ public class HomeController : Controller
                 .ThenByDescending(a => a.CreatedAt)
                 .Take(5)
                 .ToList(),
-            ByStatus = apps.GroupBy(a => a.Status).ToDictionary(g => g.Key, g => g.Count()),
-            Encouragement = Encourage(appliedThisWeek, daysSince, apps.Count),
+            ByStatus = all.GroupBy(a => a.Status).ToDictionary(g => g.Key, g => g.Count()),
+            Encouragement = Encourage(appliedThisWeek, daysSince, apps.Count, wantToApply),
             Quote = Quotes[today.DayOfYear % Quotes.Length],
         };
 
@@ -107,13 +112,17 @@ public class HomeController : Controller
         return streak;
     }
 
-    private static string Encourage(int thisWeek, int? daysSince, int total) => (thisWeek, daysSince, total) switch
+    private static string Encourage(int thisWeek, int? daysSince, int total, int wantToApply) => (thisWeek, daysSince, total, wantToApply) switch
     {
-        (_, _, 0) => "Your first application is waiting. Let's make it a good one.",
-        ( >= WeeklyGoal, _, _) => "Weekly goal reached. Look at you go!",
-        (_, 0, _) => "You sent one today. That counts for a lot.",
-        (_, <= 2, _) => "You're in a lovely rhythm. One more?",
-        (_, <= 6, _) => "A few quiet days. A small one today keeps the momentum.",
+        (_, _, 0, > 0) => $"{Saved(wantToApply)} and waiting. Pick one and send it!",
+        (_, _, 0, _) => "Your first application is waiting. Let's make it a good one.",
+        ( >= WeeklyGoal, _, _, _) => "Weekly goal reached. Look at you go!",
+        (_, 0, _, _) => "You sent one today. That counts for a lot.",
+        (_, <= 2, _, _) => "You're in a lovely rhythm. One more?",
+        (_, _, _, > 0) => $"{Saved(wantToApply)} to apply for. Today's a good day for one.",
+        (_, <= 6, _, _) => "A few quiet days. A small one today keeps the momentum.",
         _ => "It's been a little while. No pressure, just one to warm back up.",
     };
+
+    private static string Saved(int n) => n == 1 ? "You've got 1 role saved" : $"You've got {n} roles saved";
 }

@@ -1,5 +1,6 @@
 ﻿@model JobLens.Web.Models.DashboardViewModel
 @using JobLens.Web.Models
+@using JobLens.Web.Services
 @{
     ViewData["Title"] = "Dashboard";
     var goalPct = Model.WeeklyGoal == 0 ? 0 : Math.Min(100, Model.AppliedThisWeek * 100 / Model.WeeklyGoal);
@@ -80,21 +81,14 @@
             <ul class="dash-list">
                 @foreach (var a in Model.UpNext)
                 {
-                    var days = a.NextActionDate!.Value.DayNumber - Model.Today.DayNumber;
-                    var (label, cls) = days switch
-                    {
-                        < 0 => ($"{-days}d overdue", "due-late"),
-                        0 => ("today", "due-today"),
-                        1 => ("tomorrow", "due-soon"),
-                        _ => ($"in {days} days", "")
-                    };
+                    var due = DateLabels.Due(a.NextActionDate, Model.Today);
                     <li>
                         <a asp-controller="Applications" asp-action="Edit" asp-route-id="@a.Id">
                             <span class="dash-list-main">
                                 <strong>@a.Role</strong>
                                 <span>@a.Employer</span>
                             </span>
-                            <span class="due-pill @cls">@label</span>
+                            <span class="due-pill @due.CssClass">@due.Text</span>
                         </a>
                     </li>
                 }
@@ -122,7 +116,7 @@
                                 <strong>@a.Role</strong>
                                 <span>@a.Employer · @a.DateApplied.ToString("d MMM")</span>
                             </span>
-                            <span class="badge status-@a.Status">@a.Status</span>
+                            <span class="badge status-@a.Status">@a.Status.Label()</span>
                         </a>
                     </li>
                 }
@@ -136,19 +130,19 @@
     <section class="dash-card pipeline-card">
         <h2 class="dash-card-title">Where things stand</h2>
         <div class="pipeline-bar">
-            @foreach (var s in Enum.GetValues<ApplicationStatus>())
+            @foreach (var s in StatusLabels.Ordered)
             {
                 if (Model.ByStatus.TryGetValue(s, out var n) && n > 0)
                 {
-                    <span class="status-@s" style="flex: @n" title="@s: @n"></span>
+                    <span class="status-@s" style="flex: @n" title="@s.Label(): @n"></span>
                 }
             }
         </div>
         <ul class="pipeline-legend">
-            @foreach (var s in Enum.GetValues<ApplicationStatus>())
+            @foreach (var s in StatusLabels.Ordered)
             {
                 Model.ByStatus.TryGetValue(s, out var n);
-                <li><span class="legend-dot status-@s"></span>@s <strong>@n</strong></li>
+                <li><span class="legend-dot status-@s"></span>@s.Label() <strong>@n</strong></li>
             }
         </ul>
     </section>
