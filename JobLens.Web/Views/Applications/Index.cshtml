@@ -1,5 +1,6 @@
 @model IEnumerable<JobLens.Web.Models.JobApplication>
 @using JobLens.Web.Models
+@using JobLens.Web.Services
 @{
     ViewData["Title"] = "Applications";
 
@@ -10,37 +11,13 @@
     var counts = ViewBag.StatusCounts as Dictionary<ApplicationStatus, int> ?? new();
     var total = (int)(ViewBag.TotalCount ?? 0);
     var matching = counts.Values.Sum();
-    var inMotion = counts.Where(c => c.Key is ApplicationStatus.Applied or ApplicationStatus.Screening
+    var inMotion = counts.Where(c => c.Key is ApplicationStatus.Applied
         or ApplicationStatus.Interview or ApplicationStatus.Offer).Sum(c => c.Value);
+    var sent = (int)(ViewBag.SentCount ?? 0);
     var filtered = !string.IsNullOrWhiteSpace(status) || !string.IsNullOrWhiteSpace(search);
 }
 
 @functions {
-    private static string Ago(DateOnly date, DateOnly today) => (today.DayNumber - date.DayNumber) switch
-    {
-        < 0 => "upcoming",
-        0 => "today",
-        1 => "yesterday",
-        < 7 and var d => $"{d} days ago",
-        < 14 => "last week",
-        < 60 and var d => $"{d / 7} weeks ago",
-        var d => $"{d / 30} months ago",
-    };
-
-    private static (string Label, string Css) Due(DateOnly? date, DateOnly today)
-    {
-        if (date is not { } d) return ("", "");
-        var days = d.DayNumber - today.DayNumber;
-        return days switch
-        {
-            < 0 => ($"{-days}d overdue", "due-late"),
-            0 => ("Today", "due-today"),
-            1 => ("Tomorrow", "due-soon"),
-            < 7 => ($"In {days} days", "due-soon"),
-            _ => (d.ToString("d MMM"), ""),
-        };
-    }
-
     private static int Tint(string name) => name.Aggregate(0, (h, c) => (h * 31 + c) & 0xFFFF) % 6;
 
     private static string Initial(string name) =>
@@ -57,7 +34,11 @@
             }
             else
             {
-                <text><strong>@total</strong> sent so far · <strong>@inMotion</strong> still in motion</text>
+                <text><strong>@sent</strong> sent so far · <strong>@inMotion</strong> still in motion</text>
+                @if (total > sent)
+                {
+                    <text> · <strong>@(total - sent)</strong> saved to apply</text>
+                }
             }
         </p>
     </div>
@@ -95,12 +76,12 @@
            class="status-tab @(string.IsNullOrWhiteSpace(status) ? "is-active" : "")">
             All <span class="tab-count">@matching</span>
         </a>
-        @foreach (var s in Enum.GetValues<ApplicationStatus>())
+        @foreach (var s in StatusLabels.Ordered)
         {
             counts.TryGetValue(s, out var n);
             <a asp-action="Index" asp-route-status="@s" asp-route-employer="@search" asp-route-sort="@sort"
                class="status-tab @(status == s.ToString() ? "is-active" : "") @(n == 0 ? "is-zero" : "")">
-                <span class="legend-dot status-@s"></span>@s <span class="tab-count">@n</span>
+                <span class="legend-dot status-@s"></span>@s.Label() <span class="tab-count">@n</span>
             </a>
         }
     </nav>
@@ -139,7 +120,7 @@ else
 
         @foreach (var a in Model)
         {
-            var due = Due(a.NextActionDate, today);
+            var due = DateLabels.Due(a.NextActionDate, today);
             <article class="app-row">
                 <div class="app-cell app-main">
                     <span class="avatar tint-@Tint(a.Employer)" aria-hidden="true">@Initial(a.Employer)</span>
@@ -160,19 +141,19 @@ else
                 </div>
                 <div class="app-cell" data-label="Applied">
                     <span class="app-date">@a.DateApplied.ToString("d MMM")</span>
-                    <span class="app-ago">@Ago(a.DateApplied, today)</span>
+                    <span class="app-ago">@(a.Status.IsSubmitted() ? "" : "saved ")@DateLabels.Ago(a.DateApplied, today)</span>
                 </div>
                 <div class="app-cell" data-label="Status">
-                    <span class="badge status-@a.Status">@a.Status</span>
+                    <span class="badge status-@a.Status">@a.Status.Label()</span>
                 </div>
                 <div class="app-cell" data-label="Follow up">
-                    @if (due.Label == "")
+                    @if (due.State == DueState.None)
                     {
                         <span class="muted-dash">—</span>
                     }
                     else
                     {
-                        <span class="due-pill @due.Css">@due.Label</span>
+                        <span class="due-pill @due.CssClass">@due.Text</span>
                     }
                 </div>
                 <div class="app-cell app-actions">
@@ -191,7 +172,7 @@ else
 
 @foreach (var a in Model)
 {
-    var due = Due(a.NextActionDate, today);
+    var due = DateLabels.Due(a.NextActionDate, today);
     <div class="offcanvas offcanvas-end detail-panel" tabindex="-1" id="detail-@a.Id" aria-labelledby="detail-title-@a.Id">
         <div class="offcanvas-header">
             <div class="detail-head">
@@ -205,16 +186,16 @@ else
         </div>
         <div class="offcanvas-body">
             <div class="detail-status">
-                <span class="badge status-@a.Status">@a.Status</span>
-                @if (due.Label != "")
+                <span class="badge status-@a.Status">@a.Status.Label()</span>
+                @if (due.State != DueState.None)
                 {
-                    <span class="due-pill @due.Css">Follow up: @due.Label</span>
+                    <span class="due-pill @due.CssClass">Follow up: @due.Text</span>
                 }
             </div>
 
             <dl class="detail-grid">
-                <div><dt>Applied</dt><dd>@a.DateApplied.ToString("ddd d MMM yyyy")<small>@Ago(a.DateApplied, today)</small></dd></div>
-                <div><dt>Follow up</dt><dd>@(a.NextActionDate?.ToString("ddd d MMM yyyy") ?? "Not set")</dd></div>
+                <div><dt>@(a.Status.IsSubmitted() ? "Applied" : "Saved")</dt><dd>@a.DateApplied.ToString("ddd d MMM yyyy")<small>@DateLabels.Ago(a.DateApplied, today)</small></dd></div>
+                <div><dt>@(a.Status.IsSubmitted() ? "Follow up" : "Apply by")</dt><dd>@(a.NextActionDate?.ToString("ddd d MMM yyyy") ?? "Not set")</dd></div>
                 <div><dt>Location</dt><dd>@(string.IsNullOrWhiteSpace(a.Location) ? "—" : a.Location)</dd></div>
                 <div><dt>Found via</dt><dd>@(string.IsNullOrWhiteSpace(a.Source) ? "—" : a.Source)</dd></div>
             </dl>

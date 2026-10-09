@@ -102,8 +102,8 @@
 
     // Live preview
     const cheers = {
+        WantToApply: "Gotta remember to come back to this one",
         Applied: " Let's goooo",
-        Screening: "Yo someone noticed you ",
         Interview: "Ow man interview time, good luck!",
         Offer: "Offer???? Damn we got options now",
         Accepted: "Can't say you're unemployed anymore huh",
@@ -125,10 +125,17 @@
         form.querySelectorAll("[data-preview-date]").forEach((el) => {
             el.textContent = pretty(field(el.dataset.previewDate).value);
         });
-        const status = form.querySelector('[name="Status"]:checked')?.value || "Applied";
+        const checked = form.querySelector('[name="Status"]:checked');
+        const status = checked?.value || "Applied";
         statusBadge.className = `badge status-${status}`;
-        statusBadge.textContent = status;
+        statusBadge.textContent = checked?.dataset.label || status;
         cheer.textContent = cheers[status] || "";
+
+        const wishlist = status === "WantToApply";
+        form.querySelectorAll("[data-wish-text]").forEach((el) => {
+            el.dataset.defaultText ??= el.textContent;
+            el.textContent = wishlist ? el.dataset.wishText : el.dataset.defaultText;
+        });
     };
 
     form.addEventListener("input", render);

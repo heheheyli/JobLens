@@ -206,6 +206,11 @@ a:hover {
   border-color: #d7aeb9;
 }
 
+.form-control::placeholder {
+  color: #c4b6bd;
+  opacity: 1;
+}
+
 .form-group {
   margin-bottom: 0.95rem;
 }
@@ -573,7 +578,8 @@ hr {
 }
 
 .status-Applied { background: #efe6f6; color: #684878; }
-.status-Screening { background: #f8ecd4; color: #7a5a2a; }
+.status-WantToApply { background: #fbeee3; color: #8a5340; }
+.badge.status-WantToApply { border: 1px dashed #dfb79b; }
 .status-Interview { background: #e4eef8; color: #3d5d7a; }
 .status-Offer { background: #e7f3ea; color: #356348; }
 .status-Accepted { background: #d7eadc; color: #245c38; }
@@ -581,7 +587,7 @@ hr {
 .status-Withdrawn { background: #eeeae6; color: #6a5d56; }
 
 .legend-dot.status-Applied { background: #b493cc; }
-.legend-dot.status-Screening { background: #d9b46a; }
+.legend-dot.status-WantToApply { background: #e3a983; }
 .legend-dot.status-Interview { background: #7fa3c7; }
 .legend-dot.status-Offer { background: #84b896; }
 .legend-dot.status-Accepted { background: #4f9a69; }

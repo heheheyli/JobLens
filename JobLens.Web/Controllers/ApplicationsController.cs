@@ -28,6 +28,8 @@ public class ApplicationsController : Controller
             .GroupBy(a => a.Status)
             .ToDictionaryAsync(g => g.Key, g => g.Count());
         ViewBag.TotalCount = await _context.JobApplications.CountAsync();
+        ViewBag.SentCount = await _context.JobApplications
+            .CountAsync(a => a.Status != ApplicationStatus.WantToApply);
 
         if (!string.IsNullOrWhiteSpace(status)
             && Enum.TryParse<ApplicationStatus>(status, out var parsed))
