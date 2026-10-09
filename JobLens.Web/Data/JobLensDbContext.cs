@@ -29,4 +29,30 @@ public class JobLensDbContext : DbContext
             .HasForeignKey(s => s.SkillProfileId)
             .OnDelete(DeleteBehavior.Cascade);
     }
+
+    public override int SaveChanges()
+    {
+        NormaliseDates();
+        return base.SaveChanges();
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        NormaliseDates();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void NormaliseDates()
+    {
+        foreach (var entry in ChangeTracker.Entries())
+        {
+            foreach (var prop in entry.Properties)
+            {
+                if (prop.CurrentValue is DateTime { Kind: DateTimeKind.Unspecified } dt)
+                {
+                    prop.CurrentValue = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+                }
+            }
+        }
+    }
 }

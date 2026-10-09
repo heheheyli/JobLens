@@ -1,0 +1,108 @@
+@model IEnumerable<JobLens.Web.Models.JobApplication>
+@using JobLens.Web.Models
+@{
+    ViewData["Title"] = "Applications";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Applications</h1>
+    <a asp-action="Create" class="btn btn-primary">New application</a>
+</div>
+
+<form method="get" class="row g-2 mb-4">
+    <div class="col-auto">
+        <input name="employer" value="@ViewBag.Employer" class="form-control"
+               placeholder="Employer" />
+    </div>
+    <div class="col-auto">
+        <select name="status" class="form-select">
+            <option value="">All statuses</option>
+            @foreach (var s in Enum.GetValues<ApplicationStatus>())
+            {
+                <option value="@s" selected="@(ViewBag.Status as string == s.ToString())">@s</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <select name="sort" class="form-select">
+            <option value="">Newest first</option>
+            <option value="oldest" selected="@(ViewBag.Sort as string == "oldest")">Oldest first</option>
+            <option value="employer" selected="@(ViewBag.Sort as string == "employer")">Employer A–Z</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-outline-secondary">Filter</button>
+        <a asp-action="Index" class="btn btn-link">Clear</a>
+    </div>
+</form>
+
+<table class="table table-hover align-middle">
+    <thead>
+        <tr>
+            <th>Employer</th>
+            <th>Role</th>
+            <th>Applied</th>
+            <th>Status</th>
+            <th>Next action</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var a in Model)
+        {
+            <tr>
+                <td>@a.Employer</td>
+                <td>@a.Role</td>
+                <td>@a.DateApplied.ToString("d MMM yyyy")</td>
+                <td><span class="badge bg-secondary">@a.Status</span></td>
+                <td>@(a.NextActionDate?.ToString("d MMM") ?? "—")</td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-outline-primary" type="button"
+                            data-bs-toggle="offcanvas" data-bs-target="#detail-@a.Id">
+                        Details
+                    </button>
+                    <a asp-action="Edit" asp-route-id="@a.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (!Model.Any())
+{
+    <p class="text-muted">No applications match those filters.</p>
+}
+
+@foreach (var a in Model)
+{
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="detail-@a.Id">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title">@a.Role</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body">
+            <dl>
+                <dt>Employer</dt>
+                <dd>@a.Employer</dd>
+                <dt>Location</dt>
+                <dd>@(a.Location ?? "—")</dd>
+                <dt>Source</dt>
+                <dd>@(a.Source ?? "—")</dd>
+                <dt>Applied</dt>
+                <dd>@a.DateApplied.ToString("d MMM yyyy")</dd>
+                <dt>Status</dt>
+                <dd>@a.Status</dd>
+                <dt>Next action</dt>
+                <dd>@(a.NextActionDate?.ToString("d MMM yyyy") ?? "—")</dd>
+                @if (!string.IsNullOrWhiteSpace(a.Url))
+                {
+                    <dt>Listing</dt>
+                    <dd><a href="@a.Url" target="_blank" rel="noopener">Open</a></dd>
+                }
+                <dt>Notes</dt>
+                <dd>@(a.Notes ?? "—")</dd>
+            </dl>
+            <a asp-action="Delete" asp-route-id="@a.Id" class="btn btn-sm btn-outline-danger">Delete</a>
+        </div>
+    </div>
+}
