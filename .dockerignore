@@ -1,0 +1,29 @@
+# Build output
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# Git and CI files
+.git
+.gitignore
+.gitattributes
+.github/
+
+# Local configuration and secrets (never bake these into the image)
+**/appsettings.Development.json
+**/secrets.json
+**/.env
+**/.env.*
+**/*.user
+
+# Editor and OS files
+.vs/
+.vscode/
+.idea/
+**/.DS_Store
+
+# Docker files and docs (not needed at runtime)
+**/Dockerfile*
+**/docker-compose*.yml
+**/*.md
