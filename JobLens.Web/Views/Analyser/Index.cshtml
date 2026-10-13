@@ -1,0 +1,171 @@
+@model JobLens.Web.Models.AnalyserViewModel
+@{
+    ViewData["Title"] = "Analyser";
+    var result = Model.Result;
+    var found = result is null ? 0 : result.Matched.Count + result.Missing.Count;
+}
+
+<div class="list-head">
+    <div>
+        <h1>Analyser</h1>
+        <p class="list-summary">Paste a job ad to see how yo skills match.</p>
+    </div>
+    <a asp-controller="Profile" asp-action="Index" class="btn btn-outline-secondary">
+        Your skills <span class="tab-count">@Model.ProfileSkillCount</span>
+    </a>
+</div>
+
+@if (Model.ProfileSkillCount == 0)
+{
+    <div class="analyser-notice">
+        <strong>Add skills first!</strong>
+        It's empty right now so there's nothing to compare lol.
+        <a asp-controller="Profile" asp-action="Index">Add skills</a>
+    </div>
+}
+
+<div class="analyser-layout">
+    <section class="form-section analyser-input">
+        @if (Model.SavedAds.Count > 0)
+        {
+            <form method="get" asp-action="Index" class="saved-ad-picker">
+                <label for="applicationId" class="form-label">Use a saved job ad</label>
+                <select id="applicationId" name="applicationId" class="form-select" onchange="this.form.requestSubmit()">
+                    <option value="">Choose an application…</option>
+                    @foreach (var ad in Model.SavedAds)
+                    {
+                        <option value="@ad.Id" selected="@(ad.Id == Model.ApplicationId)">@ad.Label</option>
+                    }
+                </select>
+            </form>
+        }
+
+        <form method="post" asp-action="Index">
+            <input type="hidden" asp-for="ApplicationId" />
+            <label asp-for="AdText" class="form-label">Job ad</label>
+            <textarea asp-for="AdText" class="form-control analyser-text" rows="14"
+                      placeholder="Paste the full job description here…"></textarea>
+            <div class="analyser-actions">
+                <button type="submit" class="btn btn-primary">Analyse ad</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="analyser-result">
+        @if (Model.Error is not null)
+        {
+            <div class="analyser-error" role="alert">@Model.Error</div>
+        }
+
+        @if (result is null)
+        {
+            @if (Model.Error is null)
+            {
+                <div class="empty-state empty-state-small">
+                    <h2>Results here!</h2>
+                    <p>You'll get the skills found in the ad, a match score, and the gaps worth brushing up on.</p>
+                </div>
+            }
+        }
+        else if (found == 0)
+        {
+            <div class="empty-state empty-state-small">
+                <h2>No skills spotted</h2>
+                <p>Hmm... that's kinda weird. Missing parts of the ad?</p>
+            </div>
+        }
+        else
+        {
+            <form method="post" asp-action="Index" data-keep-scroll>
+                <input type="hidden" name="AdText" value="@Model.AdText" />
+                <input type="hidden" name="ApplicationId" value="@Model.ApplicationId" />
+                @foreach (var skill in Model.Extracted)
+                {
+                    <input type="hidden" name="Extracted" value="@skill" />
+                }
+
+                <article class="dash-card score-card">
+                    <div class="goal-ring" style="--pct: @(result.Score ?? 0)">
+                        <div class="goal-ring-inner">
+                            <strong>@(result.Score ?? 0)%</strong>
+                            <span>match</span>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="dash-card-title">@result.Matched.Count of @found skills match</h2>
+                        <p class="dash-muted">
+                            @(result.Score switch
+                            {
+                                >= 75 => "Aye this one's good, go get it!",
+                                >= 50 => "Pretty solid. Hope they like you too.",
+                                >= 25 => "There's a chance lol. Worth a shot gang",
+                                _ => "Dayum, bit of a gap. Maybe try anyway?",
+                            })
+                        </p>
+                    </div>
+                </article>
+
+                @if (Model.Added is not null)
+                {
+                    <p class="analyser-added">Added <strong>@Model.Added</strong> to your skills.</p>
+                }
+
+                <article class="dash-card skill-group">
+                    <h3 class="dash-label">You have (@result.Matched.Count)</h3>
+                    @if (result.Matched.Count == 0)
+                    {
+                        <p class="dash-muted small">None yet. Add any you do have from the list below.</p>
+                    }
+                    else
+                    {
+                        <ul class="skill-chips">
+                            @foreach (var skill in result.Matched)
+                            {
+                                <li class="skill-chip is-match">@skill</li>
+                            }
+                        </ul>
+                    }
+                </article>
+
+                <article class="dash-card skill-group">
+                    <h3 class="dash-label">Skill gaps (@result.Missing.Count)</h3>
+                    @if (result.Missing.Count == 0)
+                    {
+                        <p class="dash-muted small">No gaps. You cover everything this ad asks for.</p>
+                    }
+                    else
+                    {
+                        <p class="dash-muted small">You COULD have some of these skills:</p>
+                        <ul class="skill-chips">
+                            @foreach (var skill in result.Missing)
+                            {
+                                <li>
+                                    <button type="submit" name="addSkill" value="@skill" class="skill-chip is-gap"
+                                            title="Add @skill to your skills">
+                                        @skill <span aria-hidden="true">+</span>
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </article>
+            </form>
+        }
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const key = "analyser-scroll";
+            const saved = sessionStorage.getItem(key);
+            if (saved !== null) {
+                sessionStorage.removeItem(key);
+                window.scrollTo(0, Number(saved));
+            }
+            document.querySelector("[data-keep-scroll]")?.addEventListener("submit", () => {
+                sessionStorage.setItem(key, String(window.scrollY));
+            });
+        })();
+    </script>
+}

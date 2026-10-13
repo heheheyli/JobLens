@@ -1,0 +1,81 @@
+@model JobLens.Web.Models.SkillProfile
+@using JobLens.Web.Models
+@{
+    ViewData["Title"] = "Profile";
+    var flash = TempData["Flash"] as string;
+    var flashCategory = TempData["FlashCategory"] as string;
+
+    (SkillCategory Category, string Title, string Hint, string Placeholder)[] sections =
+    [
+        (SkillCategory.Technical, "Technical skills", "Languages, frameworks, web tools and AI.",
+            "e.g. C#, React, SQL, Azure"),
+        (SkillCategory.Personal, "Personal skills", "How you work with people and problems.",
+            "e.g. teamwork, leadership"),
+        (SkillCategory.Other, "Other skills", "Design, languages you speak, and more.",
+            "e.g. Figma, Japanese"),
+    ];
+}
+
+<div class="list-head">
+    <div>
+        <h1>Profile</h1>
+        <p class="list-summary">
+            Let's see what you got! The AI will compare job ads against these.
+            <strong>@Model.Skills.Count</strong> saved so far.
+        </p>
+    </div>
+    <a asp-controller="Analyser" asp-action="Index" class="btn btn-primary">Analyse a job ad</a>
+</div>
+
+<div class="skill-sections">
+    @foreach (var group in sections)
+    {
+        var key = group.Category.ToString();
+        var inputId = $"skills-{key.ToLowerInvariant()}";
+        var skills = Model.Skills
+            .Where(s => s.Category == group.Category)
+            .OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        <section class="form-section skill-section skill-section-@key.ToLowerInvariant()" id="@key.ToLowerInvariant()">
+            <div class="dash-card-head">
+                <h2 class="dash-card-title">@group.Title</h2>
+                <span class="tab-count">@skills.Count</span>
+            </div>
+            <p class="dash-muted small">@group.Hint</p>
+
+            <form method="post" asp-action="Add" class="skill-add">
+                <input type="hidden" name="category" value="@key" />
+                <label for="@inputId" class="visually-hidden">Add @group.Title.ToLowerInvariant()</label>
+                <input id="@inputId" name="skills" class="form-control" autocomplete="off"
+                       placeholder="@group.Placeholder" />
+                <button type="submit" class="btn btn-primary">Add</button>
+            </form>
+            <p class="dash-muted small skill-add-hint">Separate several with commas.</p>
+
+            @if (flash is not null && flashCategory == key)
+            {
+                <p class="analyser-added" role="status">@flash</p>
+            }
+
+            @if (skills.Count == 0)
+            {
+                <p class="dash-empty">Nothing here yet.</p>
+            }
+            else
+            {
+                <ul class="skill-chips">
+                    @foreach (var s in skills)
+                    {
+                        <li class="skill-chip">
+                            @s.Name
+                            <form method="post" asp-action="Remove" asp-route-id="@s.Id" class="d-inline">
+                                <button type="submit" class="skill-remove" aria-label="Remove @s.Name">×</button>
+                            </form>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    }
+</div>

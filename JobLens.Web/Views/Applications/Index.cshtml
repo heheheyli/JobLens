@@ -225,6 +225,10 @@ else
                     <summary>Job ad</summary>
                     <p class="detail-notes">@a.AdvertisementText</p>
                 </details>
+                <a asp-controller="Analyser" asp-action="Index" asp-route-applicationId="@a.Id" class="detail-link">
+                    <span>Analyse this ad</span>
+                    <span aria-hidden="true">→</span>
+                </a>
             }
 
             <div class="detail-actions">
