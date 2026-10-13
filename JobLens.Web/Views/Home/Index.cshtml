@@ -3,8 +3,8 @@
 @using JobLens.Web.Services
 @{
     ViewData["Title"] = "Dashboard";
-    var goalPct = Model.WeeklyGoal == 0 ? 0 : Math.Min(100, Model.AppliedThisWeek * 100 / Model.WeeklyGoal);
-    var remaining = Math.Max(0, Model.WeeklyGoal - Model.AppliedThisWeek);
+    var goalPct = Model.WeeklyGoal == 0 ? 0 : Math.Min(100, Model.AppliedPastWeek * 100 / Model.WeeklyGoal);
+    var remaining = Math.Max(0, Model.WeeklyGoal - Model.AppliedPastWeek);
 }
 
 <section class="welcome">
@@ -20,12 +20,12 @@
     <article class="dash-card goal-card">
         <div class="goal-ring" style="--pct: @goalPct">
             <div class="goal-ring-inner">
-                <strong>@Model.AppliedThisWeek</strong>
+                <strong>@Model.AppliedPastWeek</strong>
                 <span>of @Model.WeeklyGoal</span>
             </div>
         </div>
         <div>
-            <h2 class="dash-card-title">This week</h2>
+            <h2 class="dash-card-title">Past week</h2>
             <p class="dash-muted">
                 @if (remaining == 0)
                 {
@@ -33,36 +33,39 @@
                 }
                 else
                 {
-                    <text>@remaining more to reach your weekly goal.</text>
+                    <text>@remaining more to reach your goal. Gotta beat unemployment gang.</text>
                 }
             </p>
             <div class="goal-petals" aria-hidden="true">
                 @for (var i = 0; i < Model.WeeklyGoal; i++)
                 {
-                    <span class="@(i < Model.AppliedThisWeek ? "on" : "")"></span>
+                    <span class="@(i < Model.AppliedPastWeek ? "on" : "")"></span>
                 }
             </div>
         </div>
     </article>
 
     <article class="dash-card streak-card">
-        <p class="dash-label">Week streak</p>
-        <p class="streak-number">@Model.WeekStreak</p>
+        <p class="dash-label">Day streak</p>
+        <p class="streak-number">@Model.DayStreak</p>
         <p class="dash-muted">
-            @(Model.WeekStreak switch
+            @((Model.DayStreak, Model.SentToday) switch
             {
-                0 => "Send one this week to start a streak.",
-                1 => "week in a row. A beginning!",
-                _ => "weeks in a row. Keep it blooming."
+                (0, _) => "Start the streak by sending an application. NOW",
+                (_, false) => "Send one today to keep it going!",
+                (1, _) => "day in a row. A beginning!",
+                _ => "days in a row. Keep it blooming."
             })
         </p>
     </article>
 
     <article class="dash-card stats-card">
-        <div class="stat"><span class="stat-num">@Model.Active</span><span class="stat-label">In motion</span></div>
+        <div class="stat"><span class="stat-num">@Model.Total</span><span class="stat-label">Sent, all time</span></div>
+        <div class="stat"><span class="stat-num">@(Model.ResponseRate is { } rate ? $"{rate}%" : "—")</span><span class="stat-label">Response rate</span></div>
+        <div class="stat"><span class="stat-num">@Model.Active</span><span class="stat-label">It's goin</span></div>
         <div class="stat"><span class="stat-num">@Model.Interviews</span><span class="stat-label">Interviews</span></div>
         <div class="stat"><span class="stat-num">@Model.Offers</span><span class="stat-label">Offers</span></div>
-        <div class="stat"><span class="stat-num">@Model.Total</span><span class="stat-label">Sent, all time</span></div>
+        <div class="stat"><span class="stat-num">@Model.Stale.Count</span><span class="stat-label">Send a follow up?</span></div>
     </article>
 </section>
 
@@ -125,10 +128,38 @@
     </article>
 </section>
 
+@if (Model.Stale.Count > 0)
+{
+    <section class="dash-card stale-card">
+        <div class="dash-card-head">
+            <h2 class="dash-card-title">Worth chasing</h2>
+            <span class="dash-muted small">no reply after @DashboardStats.StaleAfterDays days</span>
+        </div>
+        <ul class="dash-list">
+            @foreach (var a in Model.Stale.Take(5))
+            {
+                <li>
+                    <a asp-controller="Applications" asp-action="Edit" asp-route-id="@a.Id">
+                        <span class="dash-list-main">
+                            <strong>@a.Role</strong>
+                            <span>@a.Employer · sent @a.DateApplied.ToString("d MMM")</span>
+                        </span>
+                        <span class="due-pill due-soon">@DateLabels.Ago(a.DateApplied, Model.Today)</span>
+                    </a>
+                </li>
+            }
+        </ul>
+        @if (Model.Stale.Count > 5)
+        {
+            <p class="dash-muted small stale-more">and @(Model.Stale.Count - 5) more. A quick follow-up email can go a long way.</p>
+        }
+    </section>
+}
+
 @if (Model.Total > 0)
 {
     <section class="dash-card pipeline-card">
-        <h2 class="dash-card-title">Where things stand</h2>
+        <h2 class="dash-card-title">Current progress</h2>
         <div class="pipeline-bar">
             @foreach (var s in StatusLabels.Ordered)
             {
@@ -147,8 +178,3 @@
         </ul>
     </section>
 }
-
-<aside class="quote-note">
-    <p>@Model.Quote</p>
-    <span>a note for today</span>
-</aside>
