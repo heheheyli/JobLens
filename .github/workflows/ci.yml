@@ -38,6 +38,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      outputs:
+        image: ${{ steps.imageref.outputs.image }}
     env:
       PUSH_IMAGE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
@@ -63,6 +65,12 @@ jobs:
           tags: |
             type=sha,format=long,prefix=
 
+      - name: Compute image reference
+        id: imageref
+        run: |
+          REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/${REPO_LC}:${GITHUB_SHA}" >> $GITHUB_OUTPUT
+
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
@@ -75,3 +83,61 @@ jobs:
             BUILD_TIME=${{ github.event.head_commit.timestamp }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy-staging:
+    needs: docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy image to staging
+        run: |
+          az containerapp update \
+            --name joblens-staging \
+            --resource-group rg-joblens \
+            --image ${{ needs.docker.outputs.image }}
+
+      - name: Health check staging
+        run: |
+          URL="https://joblens-staging.wonderfulsmoke-b229f128.australiaeast.azurecontainerapps.io/health"
+          for i in $(seq 1 20); do
+            if curl -fsS "$URL"; then
+              echo "Staging is healthy"
+              exit 0
+            fi
+            echo "Attempt $i: not ready yet"
+            sleep 15
+          done
+          echo "Staging never became healthy - stopping before production"
+          exit 1
+
+  deploy-production:
+    needs: [docker, deploy-staging]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Promote the same image to production
+        run: |
+          az containerapp update \
+            --name joblens-production \
+            --resource-group rg-joblens \
+            --image ${{ needs.docker.outputs.image }}
+
+      - name: Verify production
+        run: |
+          URL="https://joblens-production.wonderfulsmoke-b229f128.australiaeast.azurecontainerapps.io/health"
+          for i in $(seq 1 20); do
+            if curl -fsS "$URL"; then
+              echo "Production is healthy"
+              exit 0
+            fi
+            sleep 15
+          done
+          exit 1
