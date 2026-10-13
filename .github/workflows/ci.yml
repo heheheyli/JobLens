@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -25,3 +28,116 @@ jobs:
 
       - name: Test
         run: dotnet test --no-build --configuration Release --verbosity normal
+
+  # NEW: builds the Docker image once build and tests pass.
+  # On a pull request it only builds (proves the Dockerfile works).
+  # After a merge to main it also pushes the image to GHCR, tagged with the commit ID.
+  docker:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.imageref.outputs.image }}
+    env:
+      PUSH_IMAGE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: env.PUSH_IMAGE == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Tag = full commit ID, never reused, so any old image can be redeployed (rollback).
+      - name: Image name and tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,format=long,prefix=
+
+      - name: Compute image reference
+        id: imageref
+        run: |
+          REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/${REPO_LC}:${GITHUB_SHA}" >> $GITHUB_OUTPUT
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ env.PUSH_IMAGE == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BUILD_COMMIT=${{ github.sha }}
+            BUILD_TIME=${{ github.event.head_commit.timestamp }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-staging:
+    needs: docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy image to staging
+        run: |
+          az containerapp update \
+            --name joblens-staging \
+            --resource-group rg-joblens \
+            --image ${{ needs.docker.outputs.image }}
+
+      - name: Health check staging
+        run: |
+          URL="https://joblens-staging.wonderfulsmoke-b229f128.australiaeast.azurecontainerapps.io/health"
+          for i in $(seq 1 20); do
+            if curl -fsS "$URL"; then
+              echo "Staging is healthy"
+              exit 0
+            fi
+            echo "Attempt $i: not ready yet"
+            sleep 15
+          done
+          echo "Staging never became healthy - stopping before production"
+          exit 1
+
+  deploy-production:
+    needs: [docker, deploy-staging]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Promote the same image to production
+        run: |
+          az containerapp update \
+            --name joblens-production \
+            --resource-group rg-joblens \
+            --image ${{ needs.docker.outputs.image }}
+
+      - name: Verify production
+        run: |
+          URL="https://joblens-production.wonderfulsmoke-b229f128.australiaeast.azurecontainerapps.io/health"
+          for i in $(seq 1 20); do
+            if curl -fsS "$URL"; then
+              echo "Production is healthy"
+              exit 0
+            fi
+            sleep 15
+          done
+          exit 1
