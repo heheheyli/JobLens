@@ -123,7 +123,6 @@ else
             var due = DateLabels.Due(a.NextActionDate, today);
             <article class="app-row">
                 <div class="app-cell app-main">
-                    <span class="avatar tint-@Tint(a.Employer)" aria-hidden="true">@Initial(a.Employer)</span>
                     <div class="app-title">
                         <button type="button" class="app-role" data-bs-toggle="offcanvas" data-bs-target="#detail-@a.Id">@a.Role</button>
                         <span class="app-sub">@(string.IsNullOrWhiteSpace(a.Location) ? a.Employer : $"{a.Employer} · {a.Location}")</span>
