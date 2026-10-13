@@ -74,7 +74,7 @@ public class HomeController : Controller
         return View(model);
     }
 
-    public IActionResult Privacy()
+    public IActionResult About()
     {
         return View();
     }
@@ -87,14 +87,14 @@ public class HomeController : Controller
 
     private static string Encourage(int pastWeek, int? daysSince, int total, int wantToApply) => (pastWeek, daysSince, total, wantToApply) switch
     {
-        (_, _, 0, > 0) => $"{Saved(wantToApply)} and waiting. Pick one and send it!",
-        (_, _, 0, _) => "Your first application is waiting. Let's make it a good one.",
-        ( >= WeeklyGoal, _, _, _) => "Weekly goal reached. Look at you go!",
-        (_, 0, _, _) => "You sent one today. That counts for a lot.",
-        (_, <= 2, _, _) => "You're in a lovely rhythm. One more?",
-        (_, _, _, > 0) => $"{Saved(wantToApply)} to apply for. Today's a good day for one.",
-        (_, <= 6, _, _) => "A few quiet days. A small one today keeps the momentum.",
-        _ => "It's been a little while. No pressure, just one to warm back up.",
+        (_, _, 0, > 0) => $"{Saved(wantToApply)} and waiting. Pick one and send it already chud",
+        (_, _, 0, _) => "Make the first application yet? Why not???",
+        ( >= WeeklyGoal, _, _, _) => "Weekly goal reached, wowwwww",
+        (_, 0, _, _) => "Great job you sent one today gang",
+        (_, <= 2, _, _) => "Nice nice. Another one?",
+        (_, _, _, > 0) => $"{Saved(wantToApply)} to apply for. Just send it bro before it's too late",
+        (_, <= 6, _, _) => "Dang been a long time. I can hear cricket noises.",
+        _ => "*actual cricket noises*",
     };
 
     private static string Saved(int n) => n == 1 ? "You've got 1 role saved" : $"You've got {n} roles saved";

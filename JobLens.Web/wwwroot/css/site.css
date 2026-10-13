@@ -1527,6 +1527,46 @@ kbd {
   }
 }
 
+/* ---------- About ---------- */
+
+.about-card {
+  max-width: 32rem;
+  margin: 3rem auto;
+  padding: 2.4rem 2rem 2rem;
+  text-align: center;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.about-card .sparkle {
+  font-size: 1.6rem;
+  color: var(--rose);
+}
+
+.about-card h1 {
+  font-size: 2rem;
+  margin: 0.4rem 0 0.8rem;
+}
+
+.about-card h1::after {
+  margin: 0.55rem auto 0;
+}
+
+.about-card p {
+  margin: 0 auto;
+  max-width: 24rem;
+  color: var(--ink-soft);
+}
+
+.about-card .about-sign {
+  margin-top: 1.4rem;
+  font-family: "Fraunces", Georgia, serif;
+  font-style: italic;
+  color: var(--rose-deep);
+}
+
 /* ---------- Analyser & profile ---------- */
 
 .analyser-layout {

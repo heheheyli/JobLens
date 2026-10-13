@@ -29,7 +29,7 @@
             <p class="dash-muted">
                 @if (remaining == 0)
                 {
-                    <text>Goal met. Anything extra is a bonus.</text>
+                    <text>Wowww goal met already? How disciplined</text>
                 }
                 else
                 {
@@ -52,9 +52,9 @@
             @((Model.DayStreak, Model.SentToday) switch
             {
                 (0, _) => "Start the streak by sending an application. NOW",
-                (_, false) => "Send one today to keep it going!",
-                (1, _) => "day in a row. A beginning!",
-                _ => "days in a row. Keep it blooming."
+                (_, false) => "Ight light up the streak with one!",
+                (1, _) => "day in a row, let's go!",
+                _ => "days in a row, heall yea!"
             })
         </p>
     </article>
@@ -106,7 +106,7 @@
         </div>
         @if (Model.Recent.Count == 0)
         {
-            <p class="dash-empty">Your applications will gather here. The first one is the hardest. You've got this.</p>
+            <p class="dash-empty">Find your applications here!</p>
         }
         else
         {
@@ -132,7 +132,7 @@
 {
     <section class="dash-card stale-card">
         <div class="dash-card-head">
-            <h2 class="dash-card-title">Worth chasing</h2>
+            <h2 class="dash-card-title">Worth chasing?</h2>
             <span class="dash-muted small">no reply after @DashboardStats.StaleAfterDays days</span>
         </div>
         <ul class="dash-list">
