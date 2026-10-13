@@ -1,0 +1,22 @@
+@model JobLens.Web.Models.JobApplication
+
+@{
+    ViewData["Title"] = "Edit application";
+    ViewData["SubmitLabel"] = "Save changes";
+}
+
+<div class="form-page-head">
+    <a asp-action="Index" class="back-link">← Applications</a>
+    <h1>@Model.Role</h1>
+    <p class="form-page-sub">@Model.Employer · added @Model.CreatedAt.ToLocalTime().ToString("d MMM yyyy")</p>
+</div>
+
+<form asp-action="Edit" class="app-form" novalidate>
+    <input type="hidden" asp-for="Id" />
+    <partial name="_ApplicationForm" model="Model" />
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script src="~/js/application-form.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,17 @@
+@model JobLens.Web.Models.VersionInfo
+@{
+    ViewData["Title"] = "Version";
+}
+
+<h1>Version</h1>
+
+<dl class="row mt-4">
+    <dt class="col-sm-3">Commit</dt>
+    <dd class="col-sm-9"><code>@Model.Commit</code></dd>
+
+    <dt class="col-sm-3">Built at</dt>
+    <dd class="col-sm-9">@Model.BuiltAt</dd>
+
+    <dt class="col-sm-3">Environment</dt>
+    <dd class="col-sm-9">@Model.EnvironmentName</dd>
+</dl>

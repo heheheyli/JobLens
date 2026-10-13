@@ -1,0 +1,237 @@
+@model IEnumerable<JobLens.Web.Models.JobApplication>
+@using JobLens.Web.Models
+@using JobLens.Web.Services
+@{
+    ViewData["Title"] = "Applications";
+
+    var today = DateOnly.FromDateTime(DateTime.Now);
+    var status = ViewBag.Status as string;
+    var search = ViewBag.Employer as string;
+    var sort = ViewBag.Sort as string;
+    var counts = ViewBag.StatusCounts as Dictionary<ApplicationStatus, int> ?? new();
+    var total = (int)(ViewBag.TotalCount ?? 0);
+    var matching = counts.Values.Sum();
+    var inMotion = counts.Where(c => c.Key is ApplicationStatus.Applied
+        or ApplicationStatus.Interview or ApplicationStatus.Offer).Sum(c => c.Value);
+    var sent = (int)(ViewBag.SentCount ?? 0);
+    var filtered = !string.IsNullOrWhiteSpace(status) || !string.IsNullOrWhiteSpace(search);
+}
+
+@functions {
+    private static int Tint(string name) => name.Aggregate(0, (h, c) => (h * 31 + c) & 0xFFFF) % 6;
+
+    private static string Initial(string name) =>
+        string.IsNullOrWhiteSpace(name) ? "?" : name.Trim()[0].ToString().ToUpperInvariant();
+}
+
+<div class="list-head">
+    <div>
+        <h1>Applications</h1>
+        <p class="list-summary">
+            @if (total == 0)
+            {
+                <text>Your tracker is ready when you are.</text>
+            }
+            else
+            {
+                <text><strong>@sent</strong> sent so far · <strong>@inMotion</strong> still in motion</text>
+                @if (total > sent)
+                {
+                    <text> · <strong>@(total - sent)</strong> saved to apply</text>
+                }
+            }
+        </p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">+ New application</a>
+</div>
+
+@if (total > 0)
+{
+    <form method="get" class="list-toolbar" role="search">
+        <input type="hidden" name="status" value="@status" />
+        <label class="search-field">
+            <span class="visually-hidden">Search</span>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6" /><path d="m14 14 4 4" /></svg>
+            <input name="employer" value="@search" class="form-control" type="search"
+                   placeholder="Search employer or job title" autocomplete="off" />
+        </label>
+        <label class="sort-field">
+            <span>Sort</span>
+            <select name="sort" class="form-select" onchange="this.form.requestSubmit()">
+                <option value="">Newest first</option>
+                <option value="oldest" selected="@(sort == "oldest")">Oldest first</option>
+                <option value="followup" selected="@(sort == "followup")">Follow-up soonest</option>
+                <option value="employer" selected="@(sort == "employer")">Employer A–Z</option>
+            </select>
+        </label>
+        <button class="btn btn-outline-secondary">Search</button>
+        @if (filtered)
+        {
+            <a asp-action="Index" class="btn btn-link">Clear</a>
+        }
+    </form>
+
+    <nav class="status-tabs" aria-label="Filter by status">
+        <a asp-action="Index" asp-route-employer="@search" asp-route-sort="@sort"
+           class="status-tab @(string.IsNullOrWhiteSpace(status) ? "is-active" : "")">
+            All <span class="tab-count">@matching</span>
+        </a>
+        @foreach (var s in StatusLabels.Ordered)
+        {
+            counts.TryGetValue(s, out var n);
+            <a asp-action="Index" asp-route-status="@s" asp-route-employer="@search" asp-route-sort="@sort"
+               class="status-tab @(status == s.ToString() ? "is-active" : "") @(n == 0 ? "is-zero" : "")">
+                <span class="legend-dot status-@s"></span>@s.Label() <span class="tab-count">@n</span>
+            </a>
+        }
+    </nav>
+}
+
+@if (total == 0)
+{
+    <div class="empty-state">
+        <div class="empty-art" aria-hidden="true">
+            <span></span><span></span><span></span>
+        </div>
+        <h2>No applications yet</h2>
+        <p>Every great job story starts with a first send. Log one and it'll live here.</p>
+        <a asp-action="Create" class="btn btn-primary">Log your first application</a>
+    </div>
+}
+else if (!Model.Any())
+{
+    <div class="empty-state empty-state-small">
+        <h2>Nothing matches that</h2>
+        <p>Try a different search or status.</p>
+        <a asp-action="Index" class="btn btn-outline-secondary">Show everything</a>
+    </div>
+}
+else
+{
+    <div class="app-list">
+        <div class="app-list-head" aria-hidden="true">
+            <span>Role</span>
+            <span>Found via</span>
+            <span>Applied</span>
+            <span>Status</span>
+            <span>Follow up</span>
+            <span></span>
+        </div>
+
+        @foreach (var a in Model)
+        {
+            var due = DateLabels.Due(a.NextActionDate, today);
+            <article class="app-row">
+                <div class="app-cell app-main">
+                    <span class="avatar tint-@Tint(a.Employer)" aria-hidden="true">@Initial(a.Employer)</span>
+                    <div class="app-title">
+                        <button type="button" class="app-role" data-bs-toggle="offcanvas" data-bs-target="#detail-@a.Id">@a.Role</button>
+                        <span class="app-sub">@(string.IsNullOrWhiteSpace(a.Location) ? a.Employer : $"{a.Employer} · {a.Location}")</span>
+                    </div>
+                </div>
+                <div class="app-cell" data-label="Found via">
+                    @if (string.IsNullOrWhiteSpace(a.Source))
+                    {
+                        <span class="muted-dash">—</span>
+                    }
+                    else
+                    {
+                        <span class="source-tag">@a.Source</span>
+                    }
+                </div>
+                <div class="app-cell" data-label="Applied">
+                    <span class="app-date">@a.DateApplied.ToString("d MMM")</span>
+                    <span class="app-ago">@(a.Status.IsSubmitted() ? "" : "saved ")@DateLabels.Ago(a.DateApplied, today)</span>
+                </div>
+                <div class="app-cell" data-label="Status">
+                    <span class="badge status-@a.Status">@a.Status.Label()</span>
+                </div>
+                <div class="app-cell" data-label="Follow up">
+                    @if (due.State == DueState.None)
+                    {
+                        <span class="muted-dash">—</span>
+                    }
+                    else
+                    {
+                        <span class="due-pill @due.CssClass">@due.Text</span>
+                    }
+                </div>
+                <div class="app-cell app-actions">
+                    <button class="btn btn-sm btn-outline-primary" type="button"
+                            data-bs-toggle="offcanvas" data-bs-target="#detail-@a.Id">
+                        Details
+                    </button>
+                    <a asp-action="Edit" asp-route-id="@a.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
+                </div>
+            </article>
+        }
+    </div>
+
+    <p class="list-foot">Showing @Model.Count() of @total</p>
+}
+
+@foreach (var a in Model)
+{
+    var due = DateLabels.Due(a.NextActionDate, today);
+    <div class="offcanvas offcanvas-end detail-panel" tabindex="-1" id="detail-@a.Id" aria-labelledby="detail-title-@a.Id">
+        <div class="offcanvas-header">
+            <div class="detail-head">
+                <span class="avatar avatar-lg tint-@Tint(a.Employer)" aria-hidden="true">@Initial(a.Employer)</span>
+                <div>
+                    <h2 class="offcanvas-title" id="detail-title-@a.Id">@a.Role</h2>
+                    <p class="detail-employer">@a.Employer</p>
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div class="detail-status">
+                <span class="badge status-@a.Status">@a.Status.Label()</span>
+                @if (due.State != DueState.None)
+                {
+                    <span class="due-pill @due.CssClass">Follow up: @due.Text</span>
+                }
+            </div>
+
+            <dl class="detail-grid">
+                <div><dt>@(a.Status.IsSubmitted() ? "Applied" : "Saved")</dt><dd>@a.DateApplied.ToString("ddd d MMM yyyy")<small>@DateLabels.Ago(a.DateApplied, today)</small></dd></div>
+                <div><dt>@(a.Status.IsSubmitted() ? "Follow up" : "Apply by")</dt><dd>@(a.NextActionDate?.ToString("ddd d MMM yyyy") ?? "Not set")</dd></div>
+                <div><dt>Location</dt><dd>@(string.IsNullOrWhiteSpace(a.Location) ? "—" : a.Location)</dd></div>
+                <div><dt>Found via</dt><dd>@(string.IsNullOrWhiteSpace(a.Source) ? "—" : a.Source)</dd></div>
+            </dl>
+
+            @if (!string.IsNullOrWhiteSpace(a.Url))
+            {
+                <a href="@a.Url" target="_blank" rel="noopener" class="detail-link">
+                    <span>Open the listing</span>
+                    <span aria-hidden="true">↗</span>
+                </a>
+            }
+
+            <section class="detail-section">
+                <h3>Notes</h3>
+                @if (string.IsNullOrWhiteSpace(a.Notes))
+                {
+                    <p class="detail-empty">No notes yet. Who did you talk to? What stood out?</p>
+                }
+                else
+                {
+                    <p class="detail-notes">@a.Notes</p>
+                }
+            </section>
+
+            @if (!string.IsNullOrWhiteSpace(a.AdvertisementText))
+            {
+                <details class="detail-section detail-ad">
+                    <summary>Job ad</summary>
+                    <p class="detail-notes">@a.AdvertisementText</p>
+                </details>
+            }
+
+            <div class="detail-actions">
+                <a asp-action="Edit" asp-route-id="@a.Id" class="btn btn-primary">Edit application</a>
+                <a asp-action="Delete" asp-route-id="@a.Id" class="btn btn-link detail-delete">Delete</a>
+            </div>
+        </div>
+    </div>
+}
