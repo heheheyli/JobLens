@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -12,6 +12,14 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <!-- Same EF Core version as the web project, or the build fails with error CS1705 -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.12" />
+    <!-- Integration tests: the whole app on top of a real PostgreSQL container -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.*" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.*" />
+    <!-- End-to-end and acceptance tests: a real browser -->
+    <PackageReference Include="Microsoft.Playwright" Version="1.*" />
   </ItemGroup>
 
   <ItemGroup>
