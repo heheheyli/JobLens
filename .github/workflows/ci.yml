@@ -172,16 +172,16 @@ jobs:
 
       - name: Health check staging
         run: |
-          URL="https://joblens-staging.wonderfulsmoke-b229f128.australiaeast.azurecontainerapps.io/health"
+          URL="https://joblens-staging.wonderfulsmoke-b229f128.australiaeast.azurecontainerapps.io/Version"
           for i in $(seq 1 20); do
-            if curl -fsS "$URL"; then
-              echo "Staging is healthy"
+            if curl -fsS "$URL" | grep -q "${GITHUB_SHA}"; then
+              echo "Staging is serving ${GITHUB_SHA}"
               exit 0
             fi
             echo "Attempt $i: not ready yet"
             sleep 15
           done
-          echo "Staging never became healthy - stopping before production"
+          echo "Staging never started serving ${GITHUB_SHA} - stopping before production"
           exit 1
 
   # System and acceptance tests against the live staging site. Production waits for these.
