@@ -27,9 +27,8 @@ public static class UiSteps
     public static async Task SearchAsync(IPage page, string term)
     {
         await page.GotoAsync("/Applications");
-        var search = page.Locator("input[name=employer]");
-        await search.FillAsync(term);
-        await search.PressAsync("Enter");
+        await page.Locator("input[name=employer]").FillAsync(term);
+        await page.GetByRole(AriaRole.Button, new() { Name = "Search" }).ClickAsync();
         await page.WaitForURLAsync(new Regex("employer="));
     }
 
@@ -38,14 +37,11 @@ public static class UiSteps
     {
         await SearchAsync(page, term);
 
-        while (await page.Locator(".app-row").CountAsync() > 0)
+        // The confirm form is already in the page (inside the details panel). Submitting it
+        // avoids opening the offcanvas, which is easy for Playwright to miss in CI.
+        while (await page.Locator("form.delete-confirm").CountAsync() > 0)
         {
-            await page.Locator(".app-row").First
-                .GetByRole(AriaRole.Button, new() { Name = "Details" }).ClickAsync();
-
-            var panel = page.Locator(".offcanvas.show");
-            await panel.GetByRole(AriaRole.Button, new() { Name = "Delete" }).ClickAsync();
-            await panel.GetByRole(AriaRole.Button, new() { Name = "Yes, delete" }).ClickAsync();
+            await page.Locator("form.delete-confirm").First.EvaluateAsync("form => form.requestSubmit()");
             await page.WaitForURLAsync(ApplicationsList);
             await SearchAsync(page, term);
         }
