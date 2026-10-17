@@ -11,6 +11,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddHealthChecks();  
 builder.Services.AddDbContext<JobLensDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddApplicationInsightsTelemetry();
 
 var languageEndpoint = builder.Configuration["AzureLanguage:Endpoint"];
 var languageKey = builder.Configuration["AzureLanguage:Key"];

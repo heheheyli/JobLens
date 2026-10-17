@@ -12,6 +12,7 @@
         return y && m && d ? new Date(y, m - 1, d) : null;
     };
     const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+    const addMonths = (d, n) => new Date(d.getFullYear(), d.getMonth() + n, d.getDate());
     const today = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); };
     const pretty = (s) => {
         const d = fromIso(s);
@@ -69,7 +70,10 @@
                 input.value = "";
             } else {
                 const base = row.dataset.relativeTo ? (fromIso(field(row.dataset.relativeTo).value) || today()) : today();
-                input.value = toIso(addDays(base, Number(chip.dataset.offset)));
+                const next = chip.dataset.months
+                    ? addMonths(base, Number(chip.dataset.months))
+                    : addDays(base, Number(chip.dataset.offset));
+                input.value = toIso(next);
             }
             if (input === nextAction) nextAction.dataset.touched = "1";
             fire(input);

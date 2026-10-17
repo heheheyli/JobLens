@@ -154,36 +154,19 @@ public class ApplicationsController : Controller
         return View(jobapplication);
     }
 
-    // GET: JOBAPPLICATIONS/Delete/5
-    public async Task<IActionResult> Delete(int? id)
-    {
-        if (id == null)
-        {
-            return NotFound();
-        }
-
-        var jobapplication = await _context.JobApplications
-            .FirstOrDefaultAsync(m => m.Id == id);
-        if (jobapplication == null)
-        {
-            return NotFound();
-        }
-
-        return View(jobapplication);
-    }
-
     // POST: JOBAPPLICATIONS/Delete/5
-    [HttpPost, ActionName("Delete")]
+    [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int? id)
+    public async Task<IActionResult> Delete(int id)
     {
         var jobapplication = await _context.JobApplications.FindAsync(id);
         if (jobapplication != null)
         {
             _context.JobApplications.Remove(jobapplication);
+            await _context.SaveChangesAsync();
+            TempData["Flash"] = $"Deleted {jobapplication.Role} at {jobapplication.Employer}.";
         }
 
-        await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
     }
 

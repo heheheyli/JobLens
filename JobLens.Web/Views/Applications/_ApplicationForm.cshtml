@@ -120,9 +120,9 @@
                     <label asp-for="NextActionDate" class="form-label"><span data-wish-text="Apply by">Follow up on</span> <span class="optional">optional</span></label>
                     <input asp-for="NextActionDate" type="date" class="form-control" />
                     <div class="chip-row" data-date-target="NextActionDate" data-relative-to="DateApplied">
-                        <button type="button" class="chip" data-offset="3">+3 days</button>
                         <button type="button" class="chip" data-offset="7">+1 week</button>
                         <button type="button" class="chip" data-offset="14">+2 weeks</button>
+                        <button type="button" class="chip" data-months="1">+1 month</button>
                         <button type="button" class="chip chip-quiet" data-clear>None</button>
                     </div>
                     <span asp-validation-for="NextActionDate" class="field-error"></span>
