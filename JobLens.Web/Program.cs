@@ -55,3 +55,6 @@ app.MapControllerRoute(
     app.MapHealthChecks("/health");
 
 app.Run();
+
+// Lets the integration tests start the whole app with WebApplicationFactory<Program>.
+public partial class Program { }
