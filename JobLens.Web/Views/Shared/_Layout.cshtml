@@ -32,10 +32,16 @@
                             <a class="nav-link" asp-controller="Applications" asp-action="Index">Applications</a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" asp-controller="Analyser" asp-action="Index">Analyser</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Profile" asp-action="Index">Profile</a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" asp-controller="Version" asp-action="Index">Version</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                            <a class="nav-link" asp-controller="Home" asp-action="About">About</a>
                         </li>
                     </ul>
                     <a class="btn btn-primary btn-sm nav-cta" asp-controller="Applications" asp-action="Create">New application</a>
@@ -51,7 +57,7 @@
 
     <footer class="border-top footer">
         <div class="container">
-            &copy; 2026 JobLens · <a asp-controller="Home" asp-action="Privacy">Privacy</a>
+            &copy; 2026 JobLens · <a asp-controller="Home" asp-action="About">About</a>
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.js"></script>

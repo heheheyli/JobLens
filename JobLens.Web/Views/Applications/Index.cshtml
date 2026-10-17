@@ -30,7 +30,7 @@
         <p class="list-summary">
             @if (total == 0)
             {
-                <text>Your tracker is ready when you are.</text>
+                <text>C'mon let's put me to use</text>
             }
             else
             {
@@ -44,6 +44,11 @@
     </div>
     <a asp-action="Create" class="btn btn-primary">+ New application</a>
 </div>
+
+@if (TempData["Flash"] is string flash)
+{
+    <p class="analyser-added" role="status">@flash</p>
+}
 
 @if (total > 0)
 {
@@ -94,8 +99,8 @@
             <span></span><span></span><span></span>
         </div>
         <h2>No applications yet</h2>
-        <p>Every great job story starts with a first send. Log one and it'll live here.</p>
-        <a asp-action="Create" class="btn btn-primary">Log your first application</a>
+        <p>Log a new application! Already!</p>
+        <a asp-action="Create" class="btn btn-primary">Da first application</a>
     </div>
 }
 else if (!Model.Any())
@@ -225,11 +230,29 @@ else
                     <summary>Job ad</summary>
                     <p class="detail-notes">@a.AdvertisementText</p>
                 </details>
+                <a asp-controller="Analyser" asp-action="Index" asp-route-applicationId="@a.Id" class="detail-link">
+                    <span>Analyse this ad</span>
+                    <span aria-hidden="true">→</span>
+                </a>
             }
 
             <div class="detail-actions">
                 <a asp-action="Edit" asp-route-id="@a.Id" class="btn btn-primary">Edit application</a>
-                <a asp-action="Delete" asp-route-id="@a.Id" class="btn btn-link detail-delete">Delete</a>
+                <button type="button" class="btn btn-link detail-delete" data-bs-toggle="collapse"
+                        data-bs-target="#confirm-delete-@a.Id" aria-expanded="false" aria-controls="confirm-delete-@a.Id">
+                    Delete
+                </button>
+            </div>
+
+            <div class="collapse" id="confirm-delete-@a.Id">
+                <form asp-action="Delete" asp-route-id="@a.Id" class="delete-confirm">
+                    <p><strong>Delete this application?</strong> All history goes with it and can't be undone babe.</p>
+                    <div class="delete-confirm-actions">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse"
+                                data-bs-target="#confirm-delete-@a.Id">Keep it</button>
+                        <button type="submit" class="btn btn-sm btn-danger">Yes, delete</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

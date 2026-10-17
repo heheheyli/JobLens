@@ -10,6 +10,7 @@ permissions:
   contents: read
 
 jobs:
+  # Unit tests and integration tests (real PostgreSQL in a container) plus the coverage check.
   build-and-test:
     runs-on: ubuntu-latest
     steps:
@@ -26,10 +27,78 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      - name: Test
-        run: dotnet test --no-build --configuration Release --verbosity normal
+      # Browser tests (E2E and Acceptance) need a running site, so they have their own jobs below.
+      - name: Unit and integration tests
+        run: >
+          dotnet test --no-build --configuration Release --verbosity normal
+          --filter "Category!=E2E&Category!=Acceptance"
+          --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
-  # NEW: builds the Docker image once build and tests pass.
+      - name: Coverage of the business logic must stay at 70% or more
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          reportgenerator \
+            -reports:"TestResults/**/coverage.cobertura.xml" \
+            -targetdir:coverage-report \
+            -reporttypes:"TextSummary;Html" \
+            "-classfilters:+JobLens.Web.Services.*;+JobLens.Web.Data.SkillProfileExtensions"
+          cat coverage-report/Summary.txt
+          LINE=$(grep -oP 'Line coverage: \K[0-9.]+' coverage-report/Summary.txt | head -1)
+          echo "Business logic line coverage: ${LINE}%" >> "$GITHUB_STEP_SUMMARY"
+          awk -v c="$LINE" 'BEGIN { if (c + 0 < 70) { print "Coverage " c "% is below the 70% target"; exit 1 } }'
+
+      - name: Publish the coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage-report
+
+  # End-to-end tests: the real container and database from docker compose, driven by a real browser.
+  e2e:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build the tests
+        run: dotnet build JobLens.Tests --configuration Release
+
+      - name: Install the Playwright browser
+        run: pwsh JobLens.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: Start the app and database
+        run: |
+          echo "POSTGRES_PASSWORD=ci-only-password" > .env
+          docker compose up -d --build
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/health; then exit 0; fi
+            sleep 5
+          done
+          echo "The app never became healthy"
+          exit 1
+
+      - name: Run the end-to-end tests
+        env:
+          E2E_BASE_URL: http://localhost:8080
+        run: dotnet test JobLens.Tests --no-build --configuration Release --filter "Category=E2E" --verbosity normal
+
+      - name: Show the app logs if something failed
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop the app and database
+        if: always()
+        run: docker compose down -v
+
+  # Builds the Docker image once build and tests pass.
   # On a pull request it only builds (proves the Dockerfile works).
   # After a merge to main it also pushes the image to GHCR, tagged with the commit ID.
   docker:
@@ -84,8 +153,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # Nothing is deployed unless the unit, integration and end-to-end tests have all passed.
   deploy-staging:
-    needs: docker
+    needs: [docker, e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
@@ -114,8 +184,34 @@ jobs:
           echo "Staging never became healthy - stopping before production"
           exit 1
 
-  deploy-production:
+  # System and acceptance tests against the live staging site. Production waits for these.
+  acceptance-staging:
     needs: [docker, deploy-staging]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build the tests
+        run: dotnet build JobLens.Tests --configuration Release
+
+      - name: Install the Playwright browser
+        run: pwsh JobLens.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: Run the acceptance tests against staging
+        env:
+          E2E_BASE_URL: https://joblens-staging.wonderfulsmoke-b229f128.australiaeast.azurecontainerapps.io
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: dotnet test JobLens.Tests --no-build --configuration Release --filter "Category=Acceptance" --verbosity normal
+
+  deploy-production:
+    needs: [docker, deploy-staging, acceptance-staging]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:

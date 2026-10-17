@@ -1,4 +1,7 @@
+using Azure;
+using Azure.AI.TextAnalytics;
 using JobLens.Web.Data;
+using JobLens.Web.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +11,24 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddHealthChecks();  
 builder.Services.AddDbContext<JobLensDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+var insightsConnection = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]
+    ?? builder.Configuration["ApplicationInsights:ConnectionString"];
+if (!string.IsNullOrWhiteSpace(insightsConnection))
+{
+    builder.Services.AddApplicationInsightsTelemetry();
+}
+
+var languageEndpoint = builder.Configuration["AzureLanguage:Endpoint"];
+var languageKey = builder.Configuration["AzureLanguage:Key"];
+if (!string.IsNullOrWhiteSpace(languageEndpoint) && !string.IsNullOrWhiteSpace(languageKey))
+{
+    builder.Services.AddSingleton(new TextAnalyticsClient(new Uri(languageEndpoint), new AzureKeyCredential(languageKey)));
+    builder.Services.AddScoped<ISkillExtractor, AzureSkillExtractor>();
+}
+else
+{
+    builder.Services.AddScoped<ISkillExtractor, UnconfiguredSkillExtractor>();
+}
 
 var app = builder.Build();
 
@@ -39,3 +60,6 @@ app.MapControllerRoute(
     app.MapHealthChecks("/health");
 
 app.Run();
+
+// Lets the integration tests start the whole app with WebApplicationFactory<Program>.
+public partial class Program { }

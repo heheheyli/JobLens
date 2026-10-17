@@ -1,0 +1,81 @@
+name: Rollback
+
+# Recovery procedure: put an environment back on an earlier, known-good image.
+# Run it from the Actions tab: Rollback -> Run workflow. See docs/RECOVERY.md.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Which environment to roll back
+        type: choice
+        options:
+          - production
+          - staging
+        default: production
+      commit:
+        description: Full 40-character commit ID of the last good release (this is the image tag)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    env:
+      TARGET: ${{ inputs.environment }}
+      COMMIT: ${{ inputs.commit }}
+    steps:
+      - name: Start the timer
+        run: echo "START=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Check the commit ID looks right
+        run: |
+          if ! [[ "$COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Give the full 40-character commit ID, not the short one."
+            exit 1
+          fi
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Work out which app and image to use
+        run: |
+          REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE=ghcr.io/${REPO_LC}:${COMMIT}" >> "$GITHUB_ENV"
+          echo "APP=joblens-${TARGET}" >> "$GITHUB_ENV"
+
+      - name: Redeploy the earlier image
+        run: |
+          echo "Rolling $APP back to $IMAGE"
+          az containerapp update \
+            --name "$APP" \
+            --resource-group rg-joblens \
+            --image "$IMAGE"
+
+      - name: Wait until it is healthy and shows the right version
+        run: |
+          FQDN=$(az containerapp show --name "$APP" --resource-group rg-joblens \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          for i in $(seq 1 30); do
+            if curl -fsS "https://$FQDN/health" > /dev/null; then break; fi
+            echo "Attempt $i: not ready yet"
+            sleep 10
+          done
+          curl -fsS "https://$FQDN/health"
+          echo
+          curl -fsS "https://$FQDN/Version" | grep -q "$COMMIT" \
+            || { echo "The Version page does not show $COMMIT"; exit 1; }
+          echo "Version page shows $COMMIT"
+
+      - name: Report how long the rollback took
+        if: always()
+        run: |
+          END=$(date +%s)
+          {
+            echo "### Rollback of ${APP:-the app}"
+            echo "Commit: \`${COMMIT}\`"
+            echo "Took $((END - START)) seconds (target: under 600)."
+          } >> "$GITHUB_STEP_SUMMARY"
