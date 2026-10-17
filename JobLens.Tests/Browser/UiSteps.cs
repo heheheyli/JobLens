@@ -38,19 +38,16 @@ public static class UiSteps
     {
         await SearchAsync(page, term);
 
-        var links = page.Locator("a.detail-delete");
-        var hrefs = new List<string>();
-        var count = await links.CountAsync();
-        for (var i = 0; i < count; i++)
+        while (await page.Locator(".app-row").CountAsync() > 0)
         {
-            hrefs.Add((await links.Nth(i).GetAttributeAsync("href"))!);
-        }
+            await page.Locator(".app-row").First
+                .GetByRole(AriaRole.Button, new() { Name = "Details" }).ClickAsync();
 
-        foreach (var href in hrefs)
-        {
-            await page.GotoAsync(href);
-            await page.Locator("input[value=Delete]").ClickAsync();
+            var panel = page.Locator(".offcanvas.show");
+            await panel.GetByRole(AriaRole.Button, new() { Name = "Delete" }).ClickAsync();
+            await panel.GetByRole(AriaRole.Button, new() { Name = "Yes, delete" }).ClickAsync();
             await page.WaitForURLAsync(ApplicationsList);
+            await SearchAsync(page, term);
         }
     }
 
