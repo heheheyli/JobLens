@@ -27,7 +27,14 @@ public static class UiSteps
     public static async Task SearchAsync(IPage page, string term)
     {
         await page.GotoAsync("/Applications");
-        await page.Locator("input[name=employer]").FillAsync(term);
+        var search = page.Locator("input[name=employer]");
+        // The search box is hidden when there are no applications at all.
+        if (await search.CountAsync() == 0)
+        {
+            return;
+        }
+
+        await search.FillAsync(term);
         await page.GetByRole(AriaRole.Button, new() { Name = "Search" }).ClickAsync();
         await page.WaitForURLAsync(new Regex("employer="));
     }
@@ -43,6 +50,12 @@ public static class UiSteps
         {
             await page.Locator("form.delete-confirm").First.EvaluateAsync("form => form.requestSubmit()");
             await page.WaitForURLAsync(ApplicationsList);
+            // Last delete shows the empty state, so there is nothing left to search for.
+            if (await page.Locator("input[name=employer]").CountAsync() == 0)
+            {
+                return;
+            }
+
             await SearchAsync(page, term);
         }
     }
