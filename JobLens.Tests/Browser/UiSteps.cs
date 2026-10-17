@@ -28,8 +28,14 @@ public static class UiSteps
     {
         await page.GotoAsync("/Applications");
         var search = page.Locator("input[name=employer]");
+        // The search box is hidden when there are no applications at all.
+        if (await search.CountAsync() == 0)
+        {
+            return;
+        }
+
         await search.FillAsync(term);
-        await search.PressAsync("Enter");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Search" }).ClickAsync();
         await page.WaitForURLAsync(new Regex("employer="));
     }
 
@@ -38,19 +44,19 @@ public static class UiSteps
     {
         await SearchAsync(page, term);
 
-        var links = page.Locator("a.detail-delete");
-        var hrefs = new List<string>();
-        var count = await links.CountAsync();
-        for (var i = 0; i < count; i++)
+        // The confirm form is already in the page (inside the details panel). Submitting it
+        // avoids opening the offcanvas, which is easy for Playwright to miss in CI.
+        while (await page.Locator("form.delete-confirm").CountAsync() > 0)
         {
-            hrefs.Add((await links.Nth(i).GetAttributeAsync("href"))!);
-        }
-
-        foreach (var href in hrefs)
-        {
-            await page.GotoAsync(href);
-            await page.Locator("input[value=Delete]").ClickAsync();
+            await page.Locator("form.delete-confirm").First.EvaluateAsync("form => form.requestSubmit()");
             await page.WaitForURLAsync(ApplicationsList);
+            // Last delete shows the empty state, so there is nothing left to search for.
+            if (await page.Locator("input[name=employer]").CountAsync() == 0)
+            {
+                return;
+            }
+
+            await SearchAsync(page, term);
         }
     }
 

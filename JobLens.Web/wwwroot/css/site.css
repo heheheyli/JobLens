@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --ink: #3c2a34;
   --ink-soft: #6e5966;
   --rose: #c48496;
@@ -1525,6 +1525,28 @@ kbd {
   .nav-cta {
     margin: 0.6rem 0 0.2rem;
   }
+}
+
+/* ---------- Delete confirmation ---------- */
+
+.delete-confirm {
+  margin-top: 0.9rem;
+  padding: 0.9rem 1rem;
+  border-radius: 0.9rem;
+  background: #fbe9ec;
+  border: 1px solid #f0cdd5;
+  color: #8a3d4e;
+}
+
+.delete-confirm p {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 /* ---------- About ---------- */

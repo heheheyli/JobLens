@@ -167,7 +167,7 @@ public class ApplicationsIntegrationTests
         var app = NewApp($"Delete-{NewTag()}", "Engineer", ApplicationStatus.Rejected);
         await SeedAsync(app);
         var client = NoRedirectClient();
-        var token = await FormHelper.GetTokenAsync(client, $"/Applications/Delete/{app.Id}");
+        var token = await FormHelper.GetTokenAsync(client, "/Applications");
 
         var response = await client.PostAsync($"/Applications/Delete/{app.Id}",
             FormHelper.Form(token, ("Id", app.Id.ToString())));
