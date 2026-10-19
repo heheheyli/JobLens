@@ -54,4 +54,4 @@ Do this once before the demo and keep the screenshots.
 
 | Date | From | To | Stopwatch time | Workflow time | Passed (under 10 min) |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  |  |  |  |
+| 2026-10-20 | b539a5c (latest release) | 5863efd (earlier release) | not timed by hand | 67 seconds (workflow total 1m 16s) | Yes, under 10 minutes |

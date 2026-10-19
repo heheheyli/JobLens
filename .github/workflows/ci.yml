@@ -12,7 +12,7 @@ permissions:
 jobs:
   # Unit tests and integration tests (real PostgreSQL in a container) plus the coverage check.
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -58,7 +58,7 @@ jobs:
   # End-to-end tests: the real container and database from docker compose, driven by a real browser.
   e2e:
     needs: build-and-test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -103,7 +103,7 @@ jobs:
   # After a merge to main it also pushes the image to GHCR, tagged with the commit ID.
   docker:
     needs: build-and-test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
@@ -157,7 +157,7 @@ jobs:
   deploy-staging:
     needs: [docker, e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: azure/login@v2
         with:
@@ -188,7 +188,7 @@ jobs:
   acceptance-staging:
     needs: [docker, deploy-staging]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -213,7 +213,7 @@ jobs:
   deploy-production:
     needs: [docker, deploy-staging, acceptance-staging]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: azure/login@v2
         with:
